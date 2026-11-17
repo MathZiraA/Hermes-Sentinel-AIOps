@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Github, ListChecks, RefreshCw, SquareKanban } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { Github, ListChecks, MessagesSquare, RefreshCw, SquareKanban } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AGENTS, agentClass } from "./agents";
 import { AgentCard } from "@/components/agent/AgentCard";
@@ -60,6 +61,13 @@ export function SystemSidebar() {
 
       <section className="mt-7">
         <AgentCard name="Atlas" role="Builder" />
+        <Link
+          to="/teste-comunicacao"
+          className="mt-3 flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-[12.5px] font-medium text-foreground transition-colors hover:border-primary/40 hover:bg-accent"
+        >
+          <MessagesSquare className="h-3.5 w-3.5 text-primary" />
+          Testar Comunicação
+        </Link>
       </section>
 
       <section className="mt-8">

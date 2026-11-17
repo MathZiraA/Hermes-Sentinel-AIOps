@@ -373,9 +373,19 @@
 @utility anim-type {
   animation: type-dot 1.2s ease-in-out infinite;
 }
+@keyframes walk-hop {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-6px) rotate(-4deg); }
+  50% { transform: translateY(0) rotate(0deg); }
+  75% { transform: translateY(-6px) rotate(4deg); }
+}
+@utility anim-walk {
+  animation: walk-hop 0.5s ease-in-out infinite;
+  transform-origin: 50% 100%;
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .anim-bob, .anim-bob-shadow, .anim-float, .anim-led, .anim-dash, .anim-blink, .anim-type {
+  .anim-bob, .anim-bob-shadow, .anim-float, .anim-led, .anim-dash, .anim-blink, .anim-type, .anim-walk {
     animation: none;
   }
 }
