@@ -178,7 +178,7 @@ function Paths() {
         <g fill="none" strokeWidth="4" strokeLinecap="round" strokeDasharray="2 18" className="anim-dash">
           <path d="M360 370 Q 280 300 200 230" className="stroke-agent-blue" />
           <path d="M360 370 Q 430 230 495 150" className="stroke-agent-purple" />
-          <path d="M360 370 Q 450 450 515 500" className="stroke-agent-orange" />
+          <path d="M360 370 Q 470 450 520 585" className="stroke-agent-orange" />
           <path d="M360 370 Q 300 500 270 600" className="stroke-agent-yellow" />
         </g>
       </svg>
