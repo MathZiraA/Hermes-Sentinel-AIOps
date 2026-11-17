@@ -162,7 +162,7 @@ function Zones() {
       {zones.map((z) => (
         <Decal key={z.label} x={z.x} y={z.y} w={z.w} d={z.d} className={z.c}>
           <div className="zone-patch h-full w-full rounded-[22px]" />
-          <div className={cn("zone-label absolute text-[13px]", z.pos)} data-x=" font-bold tracking-[0.25em]">{z.label}</div>
+          <div className={cn("zone-label absolute text-[13px] font-bold tracking-[0.25em]", z.pos)}>{z.label}</div>
         </Decal>
       ))}
     </>
