@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Github, ListChecks, RefreshCw, SquareKanban } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AGENTS, agentClass } from "./agents";
+import { AgentCard } from "@/components/agent/AgentCard";
 
 const COLUMNS = [
   { name: "Backlog", count: 8, tone: "bg-agent-purple" },
@@ -56,6 +57,10 @@ export function SystemSidebar() {
           ))}
         </div>
       </header>
+
+      <section className="mt-7">
+        <AgentCard name="Atlas" role="Builder" />
+      </section>
 
       <section className="mt-8">
         <SectionLabel>Kanban Wall</SectionLabel>
