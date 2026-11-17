@@ -1,23 +1,32 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { KanbanOverlay } from "@/components/office/KanbanOverlay";
+import { OfficeScene } from "@/components/office/OfficeScene";
+import { SystemSidebar } from "@/components/office/SystemSidebar";
 
-// The home route ships no og:image, so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
 export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "Agent Factory — AI Agent Office Dashboard" },
+      { name: "description", content: "Watch your AI agents work in a cozy isometric office, with live Kanban progress and system overview." },
+      { property: "og:title", content: "Agent Factory — AI Agent Office Dashboard" },
+      { property: "og:description", content: "A playful isometric dashboard to manage AI agents, Kanban cards and GitHub sync." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
 function Index() {
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
+    <main className="flex h-screen w-screen overflow-hidden bg-background">
+      <section className="relative h-full w-3/4 min-w-0" aria-label="Isometric agent office">
+        <OfficeScene />
+        <KanbanOverlay />
+      </section>
+      <div className="h-full w-1/4 min-w-[280px]">
+        <SystemSidebar />
+      </div>
+    </main>
   );
 }
