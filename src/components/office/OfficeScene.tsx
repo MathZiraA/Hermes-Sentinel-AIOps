@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { AgentFigure } from "./AgentFigure";
 import { AGENTS, agentClass, type Agent } from "./agents";
@@ -152,17 +152,17 @@ function World() {
 
 function Zones() {
   const zones = [
-    { x: 30, y: 30, w: 320, d: 230, c: "zone-blue", label: "WORKSTATION" },
-    { x: 380, y: 30, w: 240, d: 160, c: "zone-purple", label: "WHITEBOARD" },
-    { x: 470, y: 380, w: 230, d: 230, c: "zone-orange", label: "VAULT" },
-    { x: 30, y: 540, w: 300, d: 160, c: "zone-yellow", label: "SECURITY GATE" },
+    { x: 30, y: 30, w: 320, d: 230, c: "zone-blue", label: "WORKSTATION", pos: "bottom-2 right-4" },
+    { x: 380, y: 30, w: 240, d: 160, c: "zone-purple", label: "WHITEBOARD", pos: "bottom-2 left-4" },
+    { x: 470, y: 380, w: 230, d: 230, c: "zone-orange", label: "VAULT", pos: "bottom-2 left-4" },
+    { x: 30, y: 540, w: 300, d: 160, c: "zone-yellow", label: "SECURITY GATE", pos: "bottom-2 left-4" },
   ];
   return (
     <>
       {zones.map((z) => (
         <Decal key={z.label} x={z.x} y={z.y} w={z.w} d={z.d} className={z.c}>
           <div className="zone-patch h-full w-full rounded-[22px]" />
-          <div className="zone-label absolute bottom-2 left-4 text-[13px] font-bold tracking-[0.25em]">{z.label}</div>
+          <div className={cn("zone-label absolute text-[13px]", z.pos)} data-x=" font-bold tracking-[0.25em]">{z.label}</div>
         </Decal>
       ))}
     </>
@@ -268,7 +268,7 @@ function Workstation() {
       <IsoBox x={50} y={44} z={deskZ} w={286} d={98} h={9} mat="mat-wood" shadow />
       {/* monitors */}
       {[86, 168].map((mx, i) => (
-        <div key={mx}>
+        <Fragment key={mx}>
           <IsoBox x={mx + 30} y={70} z={deskZ + 9} w={12} d={10} h={14} mat="mat-dark" />
           <IsoBox
             x={mx}
@@ -280,7 +280,7 @@ function Workstation() {
             mat="mat-dark"
             south={<Screen variant={i} />}
           />
-        </div>
+        </Fragment>
       ))}
       {/* keyboard + mug */}
       <IsoBox x={120} y={104} z={deskZ + 9} w={70} d={18} h={3} mat="mat-white" />
