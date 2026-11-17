@@ -7,7 +7,7 @@ export function AgentFigure({
 }: { color: AgentColor; accessory?: Accessory; seated?: boolean; size?: number }) {
   return (
     <div className={cn("relative", agentClass(color))} style={{ width: 48 * size, height: 76 * size }}>
-      <div className="absolute inset-0 origin-bottom" style={{ transform: `scale(${size})`, width: 48, height: 76 }}>
+      <div className="absolute bottom-0 left-0 origin-bottom-left" style={{ transform: `scale(${size})`, width: 48, height: 76 }}>
         {/* antenna */}
         <div className="absolute left-1/2 top-0 h-3 w-[2px] -translate-x-1/2 rounded-full bg-ink-soft/40" />
         <div className="agent-body absolute left-1/2 top-[-4px] h-[9px] w-[9px] -translate-x-1/2 rounded-full" />
