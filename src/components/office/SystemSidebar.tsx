@@ -4,10 +4,10 @@ import { cn } from "@/lib/utils";
 import { AGENTS, agentClass } from "./agents";
 
 const COLUMNS = [
-  { name: "Backlog", count: 8, tone: "agent-purple" },
-  { name: "In Progress", count: 2, tone: "agent-blue" },
-  { name: "Review", count: 3, tone: "agent-orange" },
-  { name: "Done", count: 14, tone: "agent-green" },
+  { name: "Backlog", count: 8, tone: "bg-agent-purple" },
+  { name: "In Progress", count: 2, tone: "bg-agent-blue" },
+  { name: "Review", count: 3, tone: "bg-agent-orange" },
+  { name: "Done", count: 14, tone: "bg-agent-green" },
 ];
 
 const EVENTS = [
@@ -63,7 +63,7 @@ export function SystemSidebar() {
           {COLUMNS.map((c) => (
             <div key={c.name} className="flex flex-col items-center gap-1.5 rounded-xl bg-muted/70 px-1 pb-2 pt-2.5">
               <div className="flex h-12 w-2 items-end overflow-hidden rounded-full bg-border">
-                <div className={cn("w-full rounded-full", `bg-${c.tone}`)} style={{ height: `${(c.count / max) * 100}%` }} />
+                <div className={cn("w-full rounded-full", c.tone)} style={{ height: `${(c.count / max) * 100}%` }} />
               </div>
               <span className="text-[13px] font-semibold text-foreground">{c.count}</span>
               <span className="text-center text-[9px] leading-tight text-muted-foreground">{c.name}</span>
