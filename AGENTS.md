@@ -28,3 +28,13 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+<!-- AGENT-MEMORY:BEGIN -->
+- Isometric office is pure CSS 3D: `src/components/office/iso.tsx` (IsoBox/Decal/Billboard in floor-space px, `project()` for 2D overlays). Why: keeps 3D depth sorting in the browser; never put a non-preserve-3d wrapper (plain div, filter, overflow) between the world and its objects or they flatten.
+- Speech bubbles render in a 2D overlay positioned with `project()`, not as 3D billboards. Why: always on top and never clipped by furniture.
+<!-- AGENT-MEMORY:END -->
+
+<!-- AGENT-MEMORY:BEGIN -->
+- Isometric office is pure CSS 3D: `src/components/office/iso.tsx` (IsoBox/Decal/Billboard in floor-space px, `project()` for 2D overlays). Why: browser handles depth sorting; never put a plain div, filter or overflow wrapper between the world and its objects or they flatten.
+- Speech bubbles render in a 2D overlay positioned with `project()`, not as 3D billboards. Why: always on top and never clipped by furniture.
+<!-- AGENT-MEMORY:END -->
