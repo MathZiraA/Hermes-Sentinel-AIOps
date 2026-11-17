@@ -357,11 +357,11 @@ function VaultZone() {
         top={<div className="m-3 h-[calc(100%-24px)] rounded-md border-2 border-card/40" />}
         west={
           <div className="relative h-full w-full">
-            <div className="vault-door absolute left-1/2 top-1/2 h-[96px] w-[96px] -translate-x-1/2 -translate-y-1/2 rounded-full">
-              <div className="vault-dial absolute left-1/2 top-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2 rounded-full" />
+            <div className="vault-door absolute flex items-center justify-center rounded-full" style={{ left: 22, top: 22, width: 96, height: 96 }}>
               {[0, 60, 120].map((r) => (
-                <div key={r} className="absolute left-1/2 top-1/2 h-[3px] w-[60px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-mat-gold/70" style={{ transform: `translate(-50%,-50%) rotate(${r}deg)` }} />
+                <div key={r} className="absolute h-[4px] w-[64px] rounded-full bg-mat-gold/80" style={{ transform: `rotate(${r}deg)` }} />
               ))}
+              <div className="vault-dial relative h-7 w-7 rounded-full shadow-card" />
             </div>
             <div className="absolute right-3 top-3 h-2 w-2 rounded-full bg-success anim-led" />
           </div>
