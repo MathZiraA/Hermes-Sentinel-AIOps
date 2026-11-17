@@ -13,7 +13,9 @@ function useFitScale(ref: React.RefObject<HTMLDivElement | null>) {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const ro = new ResizeObserver(([entry]) => {
+    const ro = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
       const { width, height } = entry.contentRect;
       setScale(Math.max(0.4, Math.min(width / SCENE_W, height / SCENE_H, 1.25)));
     });
@@ -82,7 +84,7 @@ function AgentSprite({ agent, active, onFocus }: { agent: Agent; active: boolean
           className="anim-bob absolute bottom-[2px] left-1/2 -ml-6 cursor-pointer outline-none"
           style={{ animationDelay: `${agent.delay}s` }}
         >
-          <AgentFigure color={agent.color} accessory={agent.accessory} seated={agent.seated} />
+          <AgentFigure color={agent.color} accessory={agent.accessory} seated={!!agent.seated} />
         </button>
       </Billboard>
     </>

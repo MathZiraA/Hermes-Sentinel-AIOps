@@ -4,7 +4,7 @@ import { agentClass, type Accessory, type AgentColor } from "./agents";
 /** Glossy plastic pill-shaped agent. Pure CSS; ~48x76 px. */
 export function AgentFigure({
   color, accessory, seated, size = 1,
-}: { color: AgentColor; accessory?: Accessory; seated?: boolean; size?: number }) {
+}: { color: AgentColor; accessory?: Accessory | undefined; seated?: boolean | undefined; size?: number }) {
   return (
     <div className={cn("relative", agentClass(color))} style={{ width: 48 * size, height: 76 * size }}>
       <div className="absolute bottom-0 left-0 origin-bottom-left" style={{ transform: `scale(${size})`, width: 48, height: 76 }}>
