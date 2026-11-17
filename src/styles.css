@@ -61,6 +61,8 @@
   --color-bubble: var(--bubble);
   --color-screen: var(--screen);
   --color-ink-soft: var(--ink-soft);
+  --color-mat-trim: var(--mat-wall-trim);
+  --color-mat-gold: var(--mat-gold);
 
   --shadow-float: var(--shadow-float);
   --shadow-card: var(--shadow-card);

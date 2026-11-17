@@ -230,14 +230,9 @@ function Walls() {
               AGENT FACTORY
             </div>
             <div className="absolute left-[30px] top-[44px] h-1 w-[90px] rounded-full progress-rainbow" />
-            {[300, 430].map((l) => (
-              <div key={l} className="window-surface absolute top-[20px] h-[76px] w-[100px] rounded-md border-4 border-card">
-                <div className="absolute inset-y-0 left-1/2 w-1 -translate-x-1/2 bg-card" style={{ left: "50%" }} />
-                <div className="absolute" style={{ left: l }} />
-              </div>
-            )).map((el, i) => (
-              <div key={i} className="absolute top-0" style={{ left: [290, 420][i] }}>
-                {el}
+            {[300, 440, 580].map((l) => (
+              <div key={l} className="window-surface absolute top-[20px] h-[76px] w-[110px] rounded-md border-4 border-card" style={{ left: l }}>
+                <div className="absolute inset-y-0 left-1/2 w-1 -translate-x-1/2 bg-card" />
               </div>
             ))}
           </div>
