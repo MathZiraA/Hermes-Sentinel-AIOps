@@ -122,9 +122,11 @@
   --mat-hazard: oklch(0.87 0.155 92);
   --mat-red: oklch(0.66 0.19 25);
 
-  --shadow-float: 0 30px 60px -20px color-mix(in oklab, var(--iso-shade) 40%, transparent),
+  --shadow-float:
+    0 30px 60px -20px color-mix(in oklab, var(--iso-shade) 40%, transparent),
     0 8px 20px -8px color-mix(in oklab, var(--iso-shade) 20%, transparent);
-  --shadow-card: 0 6px 16px -8px color-mix(in oklab, var(--iso-shade) 30%, transparent),
+  --shadow-card:
+    0 6px 16px -8px color-mix(in oklab, var(--iso-shade) 30%, transparent),
     0 1px 2px color-mix(in oklab, var(--iso-shade) 12%, transparent);
   --shadow-bubble: 0 6px 14px -4px color-mix(in oklab, var(--iso-shade) 30%, transparent);
 
@@ -159,11 +161,18 @@
 @layer components {
   .iso-canvas {
     background:
-      radial-gradient(ellipse 70% 55% at 50% 55%, color-mix(in oklab, var(--sky-top) 60%, white), transparent 70%),
+      radial-gradient(
+        ellipse 70% 55% at 50% 55%,
+        color-mix(in oklab, var(--sky-top) 60%, white),
+        transparent 70%
+      ),
       linear-gradient(180deg, var(--sky-top), var(--sky-bottom));
   }
   .iso-dots {
-    background-image: radial-gradient(color-mix(in oklab, var(--iso-shade) 14%, transparent) 1px, transparent 1.5px);
+    background-image: radial-gradient(
+      color-mix(in oklab, var(--iso-shade) 14%, transparent) 1px,
+      transparent 1.5px
+    );
     background-size: 22px 22px;
   }
 
@@ -188,10 +197,18 @@
     background: linear-gradient(135deg, color-mix(in oklab, var(--iso-c) 86%, white), var(--iso-c));
   }
   .iso-south {
-    background: linear-gradient(180deg, var(--iso-c), color-mix(in oklab, var(--iso-c) 88%, var(--iso-shade)));
+    background: linear-gradient(
+      180deg,
+      var(--iso-c),
+      color-mix(in oklab, var(--iso-c) 88%, var(--iso-shade))
+    );
   }
   .iso-west {
-    background: linear-gradient(180deg, color-mix(in oklab, var(--iso-c) 82%, var(--iso-shade)), color-mix(in oklab, var(--iso-c) 70%, var(--iso-shade)));
+    background: linear-gradient(
+      180deg,
+      color-mix(in oklab, var(--iso-c) 82%, var(--iso-shade)),
+      color-mix(in oklab, var(--iso-c) 70%, var(--iso-shade))
+    );
   }
   .iso-floor-tiles {
     background-color: var(--floor);
@@ -199,38 +216,85 @@
       linear-gradient(var(--floor-line) 1.5px, transparent 1.5px),
       linear-gradient(90deg, var(--floor-line) 1.5px, transparent 1.5px),
       repeating-conic-gradient(var(--floor-alt) 0 25%, transparent 0 50%);
-    background-size: 60px 60px, 60px 60px, 120px 120px;
+    background-size:
+      60px 60px,
+      60px 60px,
+      120px 120px;
   }
   .iso-contact-shadow {
-    background: radial-gradient(closest-side, color-mix(in oklab, var(--iso-shade) 38%, transparent), transparent);
+    background: radial-gradient(
+      closest-side,
+      color-mix(in oklab, var(--iso-shade) 38%, transparent),
+      transparent
+    );
   }
   .iso-box-shadow {
     background: color-mix(in oklab, var(--iso-shade) 22%, transparent);
     filter: blur(10px);
   }
 
-  .mat-wall { --iso-c: var(--mat-wall); }
-  .mat-trim { --iso-c: var(--mat-wall-trim); }
-  .mat-wood { --iso-c: var(--mat-wood); }
-  .mat-white { --iso-c: var(--mat-white); }
-  .mat-metal { --iso-c: var(--mat-metal); }
-  .mat-dark { --iso-c: var(--mat-dark); }
-  .mat-vault { --iso-c: var(--mat-vault); }
-  .mat-gold { --iso-c: var(--mat-gold); }
-  .mat-pot { --iso-c: var(--mat-pot); }
-  .mat-glass { --iso-c: var(--mat-glass); }
-  .mat-red { --iso-c: var(--mat-red); }
-  .mat-hazard { --iso-c: var(--mat-hazard); }
-  .mat-blue { --iso-c: var(--agent-blue); }
-  .mat-green { --iso-c: var(--agent-green); }
-  .mat-purple { --iso-c: var(--agent-purple); }
+  .mat-wall {
+    --iso-c: var(--mat-wall);
+  }
+  .mat-trim {
+    --iso-c: var(--mat-wall-trim);
+  }
+  .mat-wood {
+    --iso-c: var(--mat-wood);
+  }
+  .mat-white {
+    --iso-c: var(--mat-white);
+  }
+  .mat-metal {
+    --iso-c: var(--mat-metal);
+  }
+  .mat-dark {
+    --iso-c: var(--mat-dark);
+  }
+  .mat-vault {
+    --iso-c: var(--mat-vault);
+  }
+  .mat-gold {
+    --iso-c: var(--mat-gold);
+  }
+  .mat-pot {
+    --iso-c: var(--mat-pot);
+  }
+  .mat-glass {
+    --iso-c: var(--mat-glass);
+  }
+  .mat-red {
+    --iso-c: var(--mat-red);
+  }
+  .mat-hazard {
+    --iso-c: var(--mat-hazard);
+  }
+  .mat-blue {
+    --iso-c: var(--agent-blue);
+  }
+  .mat-green {
+    --iso-c: var(--agent-green);
+  }
+  .mat-purple {
+    --iso-c: var(--agent-purple);
+  }
 
   /* Floor zone decals */
-  .zone-blue { --zone: var(--agent-blue); }
-  .zone-orange { --zone: var(--agent-orange); }
-  .zone-purple { --zone: var(--agent-purple); }
-  .zone-green { --zone: var(--agent-green); }
-  .zone-yellow { --zone: var(--agent-yellow); }
+  .zone-blue {
+    --zone: var(--agent-blue);
+  }
+  .zone-orange {
+    --zone: var(--agent-orange);
+  }
+  .zone-purple {
+    --zone: var(--agent-purple);
+  }
+  .zone-green {
+    --zone: var(--agent-green);
+  }
+  .zone-yellow {
+    --zone: var(--agent-yellow);
+  }
   .zone-patch {
     background: color-mix(in oklab, var(--zone) 12%, transparent);
     border: 2px dashed color-mix(in oklab, var(--zone) 45%, transparent);
@@ -239,44 +303,98 @@
     color: color-mix(in oklab, var(--zone) 70%, var(--iso-shade));
   }
   .hazard-stripes {
-    background: repeating-linear-gradient(45deg, var(--mat-hazard) 0 10px, var(--mat-dark) 10px 20px);
+    background: repeating-linear-gradient(
+      45deg,
+      var(--mat-hazard) 0 10px,
+      var(--mat-dark) 10px 20px
+    );
   }
 
   /* Surfaces drawn on faces */
   .screen-surface {
-    background:
-      linear-gradient(160deg, color-mix(in oklab, var(--screen) 80%, var(--agent-blue)), var(--screen));
+    background: linear-gradient(
+      160deg,
+      color-mix(in oklab, var(--screen) 80%, var(--agent-blue)),
+      var(--screen)
+    );
   }
   .whiteboard-surface {
-    background: linear-gradient(160deg, var(--mat-white), color-mix(in oklab, var(--mat-white) 92%, var(--mat-glass)));
+    background: linear-gradient(
+      160deg,
+      var(--mat-white),
+      color-mix(in oklab, var(--mat-white) 92%, var(--mat-glass))
+    );
   }
   .window-surface {
-    background: linear-gradient(170deg, color-mix(in oklab, var(--mat-glass) 70%, white), var(--mat-glass));
+    background: linear-gradient(
+      170deg,
+      color-mix(in oklab, var(--mat-glass) 70%, white),
+      var(--mat-glass)
+    );
   }
   .vault-door {
-    background: radial-gradient(circle at 38% 32%, color-mix(in oklab, var(--mat-vault) 55%, white), var(--mat-vault) 55%, color-mix(in oklab, var(--mat-vault) 70%, var(--iso-shade)));
-    box-shadow: inset 0 0 0 5px color-mix(in oklab, var(--mat-vault) 75%, var(--iso-shade)), 0 4px 10px -2px color-mix(in oklab, var(--iso-shade) 40%, transparent);
+    background: radial-gradient(
+      circle at 38% 32%,
+      color-mix(in oklab, var(--mat-vault) 55%, white),
+      var(--mat-vault) 55%,
+      color-mix(in oklab, var(--mat-vault) 70%, var(--iso-shade))
+    );
+    box-shadow:
+      inset 0 0 0 5px color-mix(in oklab, var(--mat-vault) 75%, var(--iso-shade)),
+      0 4px 10px -2px color-mix(in oklab, var(--iso-shade) 40%, transparent);
   }
   .vault-dial {
-    background: radial-gradient(circle at 40% 35%, var(--mat-gold), color-mix(in oklab, var(--mat-gold) 70%, var(--iso-shade)));
+    background: radial-gradient(
+      circle at 40% 35%,
+      var(--mat-gold),
+      color-mix(in oklab, var(--mat-gold) 70%, var(--iso-shade))
+    );
   }
   .leaf {
-    background: radial-gradient(circle at 35% 30%, color-mix(in oklab, var(--mat-leaf) 60%, white), var(--mat-leaf) 60%, color-mix(in oklab, var(--mat-leaf) 70%, var(--iso-shade)));
+    background: radial-gradient(
+      circle at 35% 30%,
+      color-mix(in oklab, var(--mat-leaf) 60%, white),
+      var(--mat-leaf) 60%,
+      color-mix(in oklab, var(--mat-leaf) 70%, var(--iso-shade))
+    );
   }
 
   /* ---------- Agents: glossy plastic pills ---------- */
-  .agent-blue { --agent: var(--agent-blue); }
-  .agent-orange { --agent: var(--agent-orange); }
-  .agent-purple { --agent: var(--agent-purple); }
-  .agent-green { --agent: var(--agent-green); }
-  .agent-yellow { --agent: var(--agent-yellow); }
-  .agent-fill { background: var(--agent); }
-  .agent-text { color: color-mix(in oklab, var(--agent) 80%, var(--iso-shade)); }
+  .agent-blue {
+    --agent: var(--agent-blue);
+  }
+  .agent-orange {
+    --agent: var(--agent-orange);
+  }
+  .agent-purple {
+    --agent: var(--agent-purple);
+  }
+  .agent-green {
+    --agent: var(--agent-green);
+  }
+  .agent-yellow {
+    --agent: var(--agent-yellow);
+  }
+  .agent-fill {
+    background: var(--agent);
+  }
+  .agent-text {
+    color: color-mix(in oklab, var(--agent) 80%, var(--iso-shade));
+  }
   .agent-body {
     border-radius: 50px;
     background:
-      radial-gradient(circle at 30% 22%, color-mix(in oklab, var(--agent) 25%, white) 0 10%, transparent 26%),
-      radial-gradient(ellipse 120% 90% at 35% 30%, color-mix(in oklab, var(--agent) 85%, white), var(--agent) 48%, color-mix(in oklab, var(--agent) 68%, var(--iso-shade)) 100%);
+      radial-gradient(
+        circle at 30% 22%,
+        color-mix(in oklab, var(--agent) 25%, white) 0 10%,
+        transparent 26%
+      ),
+      radial-gradient(
+        ellipse 120% 90% at 35% 30%,
+        color-mix(in oklab, var(--agent) 85%, white),
+        var(--agent) 48%,
+        color-mix(in oklab, var(--agent) 68%, var(--iso-shade)) 100%
+      );
     box-shadow:
       inset -6px -8px 14px color-mix(in oklab, var(--agent) 60%, var(--iso-shade)),
       inset 4px 4px 8px color-mix(in oklab, var(--agent) 40%, white),
@@ -284,14 +402,22 @@
   }
   .agent-limb {
     border-radius: 50px;
-    background: linear-gradient(180deg, color-mix(in oklab, var(--agent) 85%, white), color-mix(in oklab, var(--agent) 75%, var(--iso-shade)));
+    background: linear-gradient(
+      180deg,
+      color-mix(in oklab, var(--agent) 85%, white),
+      color-mix(in oklab, var(--agent) 75%, var(--iso-shade))
+    );
   }
   .agent-eye {
     background: radial-gradient(circle at 50% 50%, var(--mat-dark) 0 42%, white 44%);
     box-shadow: 0 1px 2px color-mix(in oklab, var(--iso-shade) 30%, transparent);
   }
   .agent-blush {
-    background: radial-gradient(closest-side, color-mix(in oklab, var(--mat-red) 45%, transparent), transparent);
+    background: radial-gradient(
+      closest-side,
+      color-mix(in oklab, var(--mat-red) 45%, transparent),
+      transparent
+    );
   }
   .agent-ring {
     box-shadow: 0 0 0 3px color-mix(in oklab, var(--agent) 35%, transparent);
@@ -315,7 +441,14 @@
     -webkit-backdrop-filter: blur(14px);
   }
   .progress-rainbow {
-    background: linear-gradient(90deg, var(--agent-blue), var(--agent-purple), var(--agent-orange), var(--agent-yellow), var(--agent-green));
+    background: linear-gradient(
+      90deg,
+      var(--agent-blue),
+      var(--agent-purple),
+      var(--agent-orange),
+      var(--agent-yellow),
+      var(--agent-green)
+    );
   }
   .progress-agent {
     background: linear-gradient(90deg, color-mix(in oklab, var(--agent) 80%, white), var(--agent));
@@ -324,31 +457,69 @@
 
 /* ---------- Motion ---------- */
 @keyframes bob {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-7px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-7px);
+  }
 }
 @keyframes bob-shadow {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(0.78); opacity: 0.65; }
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(0.78);
+    opacity: 0.65;
+  }
 }
 @keyframes float-soft {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-5px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
 }
 @keyframes blink-led {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.25; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
 }
 @keyframes dash-flow {
-  to { stroke-dashoffset: -40; }
+  to {
+    stroke-dashoffset: -40;
+  }
 }
 @keyframes eye-blink {
-  0%, 92%, 100% { transform: scaleY(1); }
-  95% { transform: scaleY(0.1); }
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+  95% {
+    transform: scaleY(0.1);
+  }
 }
 @keyframes type-dot {
-  0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
-  40% { opacity: 1; transform: translateY(-2px); }
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
 }
 
 @utility anim-bob {
@@ -374,18 +545,49 @@
   animation: type-dot 1.2s ease-in-out infinite;
 }
 @keyframes walk-hop {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  25% { transform: translateY(-6px) rotate(-4deg); }
-  50% { transform: translateY(0) rotate(0deg); }
-  75% { transform: translateY(-6px) rotate(4deg); }
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-6px) rotate(-4deg);
+  }
+  50% {
+    transform: translateY(0) rotate(0deg);
+  }
+  75% {
+    transform: translateY(-6px) rotate(4deg);
+  }
 }
 @utility anim-walk {
   animation: walk-hop 0.5s ease-in-out infinite;
   transform-origin: 50% 100%;
 }
 
+@keyframes bubble-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@utility anim-bubble-in {
+  animation: bubble-in 0.22s cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .anim-bob, .anim-bob-shadow, .anim-float, .anim-led, .anim-dash, .anim-blink, .anim-type, .anim-walk {
+  .anim-bubble-in,
+  .anim-bob,
+  .anim-bob-shadow,
+  .anim-float,
+  .anim-led,
+  .anim-dash,
+  .anim-blink,
+  .anim-type,
+  .anim-walk {
     animation: none;
   }
 }
