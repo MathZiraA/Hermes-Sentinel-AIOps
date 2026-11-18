@@ -157,6 +157,10 @@ class HermesUnavailable(RuntimeError):
     pass
 
 
+class BudgetExceeded(HermesBusy):
+    """Orçamento diário de IA atingido: o diagnóstico cai para os runbooks até o dia virar."""
+
+
 def _extract_json(text: str) -> dict[str, Any]:
     text = text.strip()
     fence = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.S)
@@ -236,6 +240,8 @@ class HermesClient:
         self._last_call = 0.0
         self.last_error: str | None = None
         self.calls = 0
+        self._usage: dict[str, Any] = {}
+        self._transport: httpx.AsyncBaseTransport | None = None  # testes injetam um MockTransport
 
     def _ssl(self) -> ssl.SSLContext | bool:
         bundle = settings.ca_bundle
@@ -328,6 +334,7 @@ class HermesClient:
                 if r.status_code >= 400:
                     raise HermesUnavailable(f"HTTP {r.status_code}: {r.text[:160]}")
                 data = r.json()
+                self._usage = data.get("usage") or {}
                 choice = (data.get("choices") or [{}])[0]
                 if choice.get("finish_reason") == "error":
                     err = str((data.get("error") or {}).get("message", ""))
@@ -378,30 +385,97 @@ class HermesClient:
         from google.genai import types
 
         client = genai.Client(api_key=settings.gemini_api_key)
+        model = (
+            settings.ai_model
+            if settings.ai_provider == "gemini" and settings.ai_model
+            else settings.gemini_fallback_model
+        )
         resp = await client.aio.models.generate_content(
-            model=settings.gemini_fallback_model,
+            model=model,
             contents=user,
             config=types.GenerateContentConfig(system_instruction=system, response_mime_type="application/json"),
         )
+        meta = getattr(resp, "usage_metadata", None)
+        self._usage = {
+            "prompt_tokens": getattr(meta, "prompt_token_count", 0) or 0,
+            "completion_tokens": getattr(meta, "candidates_token_count", 0) or 0,
+        }
         return resp.text or ""
 
+    async def _openai_chat(self, system: str, user: str, timeout: float | None = None) -> str:  # noqa: ASYNC109
+        """Qualquer API compatível com OpenAI: OpenAI, Claude (endpoint compatível), Ollama, vLLM, LM Studio…"""
+        if not (settings.ai_base_url and settings.ai_model):
+            raise HermesUnavailable("AI_BASE_URL e AI_MODEL são obrigatórios para AI_PROVIDER=openai")
+        headers = {"Authorization": f"Bearer {settings.ai_api_key}"} if settings.ai_api_key else {}
+        payload = {
+            "model": settings.ai_model,
+            "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
+            "temperature": 0.1,
+        }
+        kwargs: dict[str, Any] = {"timeout": timeout or settings.hermes_timeout}
+        if self._transport is not None:
+            kwargs["transport"] = self._transport
+        async with httpx.AsyncClient(**kwargs) as http:
+            try:
+                r = await http.post(f"{settings.ai_base_url}/chat/completions", headers=headers, json=payload)
+            except httpx.TimeoutException as exc:
+                raise HermesBusy("timeout do provedor de IA") from exc
+            except httpx.HTTPError as exc:
+                raise HermesUnavailable(f"provedor de IA inacessível: {type(exc).__name__}") from exc
+        if r.status_code in (429, 503):
+            raise HermesBusy(f"provedor ocupado (HTTP {r.status_code})")
+        if r.status_code >= 400:
+            raise HermesUnavailable(f"HTTP {r.status_code}: {r.text[:160]}")
+        data = r.json()
+        self._usage = data.get("usage") or {}
+        return ((data.get("choices") or [{}])[0].get("message") or {}).get("content") or ""
+
     async def chat(self, system: str, user: str, timeout: float | None = None) -> tuple[str, str]:  # noqa: ASYNC109
-        """Uma chamada de IA, serializada e espaçada. Devolve (texto, fonte)."""
+        """Uma chamada de IA: respeita o orçamento diário, é serializada e espaçada. Devolve (texto, fonte)."""
+        from db import ai as usage
+
+        try:
+            allowed, why = await usage.budget_left()
+        except Exception:  # sem banco (ex.: testes de unidade): não bloqueia
+            allowed, why = True, ""
+        if not allowed:
+            await self._record(settings.ai_provider, blocked=True)
+            raise BudgetExceeded(why)
         async with self._lock:
             await self._respect_quota()
+            self._usage = {}
+            source = settings.ai_provider
             try:
                 self.calls += 1
+                if settings.ai_provider == "openai":
+                    source = "openai-compatible"
+                    return await self._openai_chat(system, user, timeout), source
+                if settings.ai_provider == "gemini":
+                    source = "gemini-direct"
+                    return await self._gemini_direct(system, user), source
                 if settings.hermes_mode == "cli":
-                    return await self._cli_chat(system, user), "hermes-cli"
+                    source = "hermes-cli"
+                    return await self._cli_chat(system, user), source
                 try:
-                    return await self._gateway_chat(system, user, timeout), "hermes-gateway"
+                    source = "hermes-gateway"
+                    return await self._gateway_chat(system, user, timeout), source
                 except HermesBusy as busy:
                     if settings.gemini_api_key:
                         log.warning("gateway ocupado (%s) — usando Gemini direto", busy)
-                        return await self._gemini_direct(system, user), "gemini-direct"
+                        source = "gemini-direct"
+                        return await self._gemini_direct(system, user), source
                     raise
             finally:
                 self._last_call = time.monotonic()
+                await self._record(source, self._usage.get("prompt_tokens", 0), self._usage.get("completion_tokens", 0))
+
+    async def _record(self, provider: str, tokens_in: int = 0, tokens_out: int = 0, blocked: bool = False) -> None:
+        from db import ai as usage
+
+        try:
+            await usage.record(provider, tokens_in, tokens_out, blocked)
+        except Exception as exc:  # contabilidade nunca derruba uma investigação
+            log.debug("consumo de IA não registrado: %s", type(exc).__name__)
 
     # ------------------------------------------------------------------ alto nível
     async def diagnose(self, inc: Incident, runbooks: list[tuple[str, str]]) -> dict[str, Any]:
@@ -430,6 +504,9 @@ class HermesClient:
             rca["source"] = source
             self.last_error = None
             return rca
+        except BudgetExceeded as exc:
+            self.last_error = str(exc)
+            return fallback_rca(inc, runbooks, f"IA pausada: {exc}")
         except HermesBusy as exc:
             self.last_error = f"ocupado: {exc}"
             return fallback_rca(inc, runbooks, f"IA ocupada/quota (429): {exc}")
@@ -448,8 +525,8 @@ class HermesClient:
         consultar_runbook). Se o Hermes/túnel falhar, cai para `diagnose` (logs no prompt)
         e, em último caso, para o RCA local.
         """
-        if not settings.mcp_token or settings.hermes_mode == "cli":
-            return await self.diagnose(inc, runbooks)
+        if not settings.mcp_token or settings.hermes_mode == "cli" or settings.ai_provider != "hermes":
+            return await self.diagnose(inc, runbooks)  # investigação agêntica (MCP) só com o Hermes
         user = (
             f"INCIDENTE {inc.id} no cluster Kubernetes do notebook (StockFlow).\n"
             f"Tipo detectado pelo Monitor: {inc.type} (severidade {inc.severity})\n"
@@ -466,6 +543,9 @@ class HermesClient:
         try:
             text, source = await self.chat(AGENT_RCA_SYSTEM_PROMPT, user, timeout=settings.hermes_agent_timeout)
             rca = _extract_json(text)
+        except BudgetExceeded as exc:
+            self.last_error = str(exc)
+            return fallback_rca(inc, runbooks, f"IA pausada: {exc}")
         except Exception as exc:
             log.warning("investigação agêntica falhou (%s) — usando diagnóstico com logs no prompt", exc)
             self.last_error = f"agente/MCP: {type(exc).__name__}"

@@ -187,3 +187,30 @@ class OnCallShift(Base):
     level: Mapped[int] = mapped_column(Integer, default=1)
     starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     ends_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+
+
+# --------------------------------------------------------------------------- IA (Fase 6)
+class AiUsage(Base):
+    """Consumo de IA por dia e provedor (orçamento e custo)."""
+
+    __tablename__ = "ai_usage"
+
+    day: Mapped[str] = mapped_column(String(10), primary_key=True)  # AAAA-MM-DD (UTC)
+    provider: Mapped[str] = mapped_column(String(40), primary_key=True)
+    calls: Mapped[int] = mapped_column(Integer, default=0)
+    blocked: Mapped[int] = mapped_column(Integer, default=0)
+    tokens_in: Mapped[int] = mapped_column(Integer, default=0)
+    tokens_out: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class BrainNote(Base):
+    """Índice do Hermes Brain no banco: busca rápida (BM25) e, opcionalmente, semântica (embeddings)."""
+
+    __tablename__ = "brain_notes"
+
+    name: Mapped[str] = mapped_column(String(255), primary_key=True)
+    folder: Mapped[str] = mapped_column(String(120))
+    text: Mapped[str] = mapped_column(Text)
+    mtime: Mapped[float] = mapped_column()
+    embedding: Mapped[list[Any] | None] = mapped_column(JSON)
+    indexed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
