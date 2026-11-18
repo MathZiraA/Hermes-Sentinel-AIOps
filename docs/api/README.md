@@ -3,20 +3,55 @@
 O contrato completo está em [`openapi.json`](openapi.json) (gerado por `make openapi`) e, com o backend rodando, em
 http://localhost:8000/docs.
 
-> Em `0.1.x` a API não tem autenticação e escuta só em `127.0.0.1`. Login e papéis chegam na Fase 2.
+Toda rota exige login (cookie `sentinel_session`, HttpOnly), exceto `/api/healthz` e `/api/auth/config`. Cada rota
+exige uma permissão do papel (tabela abaixo) e filtra pelo escopo dos times do usuário. Escritas de uma origem fora de
+`CORS_ORIGINS` são recusadas.
+
+## Autenticação
+
+| Método | Rota | Descrição |
+|---|---|---|
+| `GET` | `/api/auth/config` | Público: login habilitado, SSO disponível, instalação sem usuários |
+| `POST` | `/api/auth/setup` | Cria o primeiro administrador (só com o banco sem usuários) |
+| `POST` | `/api/auth/login` | `{"email", "password", "code"?}`. Com 2FA ativo, sem `code`: 401 `mfa_required`. Bloqueio: 429 |
+| `POST` | `/api/auth/logout` | Revoga a sessão |
+| `GET` | `/api/auth/me` | Usuário, papel, permissões e escopo |
+| `POST` | `/api/auth/password` | `{"current", "new"}`; revoga as outras sessões |
+| `POST` | `/api/auth/totp/setup` · `/enable` · `/disable` | Configura o 2FA (segredo + URI `otpauth://` para QR) |
+| `GET` | `/api/auth/oidc/login` · `/oidc/callback` | SSO OIDC (Authorization Code + PKCE) |
+
+## Administração (papel Admin)
+
+| Método | Rota | Descrição |
+|---|---|---|
+| `GET` · `POST` | `/api/admin/users` | Lista e cria usuários (`{"email", "name", "role", "password"?}`) |
+| `PATCH` | `/api/admin/users/{id}` | `{"name"?, "role"?, "active"?}`; mudanças de acesso derrubam as sessões |
+| `POST` | `/api/admin/users/{id}/password` | Redefine a senha |
+| `GET` · `POST` | `/api/admin/teams` | Lista e cria times |
+| `PUT` · `DELETE` | `/api/admin/teams/{id}` | `{"members": [e-mails], "scopes": [{"cluster", "namespace"}]}` |
+
+## Permissões por papel
+
+| Permissão | Visualizador | Auditor | Operador | Admin |
+|---|:-:|:-:|:-:|:-:|
+| ver incidentes, relatórios, clusters, saúde | ✅ | ✅ | ✅ | ✅ |
+| reconhecer, aprovar, rejeitar, simular | | | ✅ | ✅ |
+| auditoria (ler, verificar, exportar) | | ✅ | | ✅ |
+| usuários e times | | | | ✅ |
 
 ## REST
 
 | Método | Rota | Descrição |
 |---|---|---|
-| `GET` | `/api/health` | Kubernetes, gateway do Hermes, Hermes Brain, GitHub, MCP e contadores de IA |
+| `GET` | `/api/healthz` | Liveness público (sem detalhes) |
+| `GET` | `/api/health` | Kubernetes, gateway do Hermes, Hermes Brain, banco, GitHub, MCP e contadores de IA |
 | `GET` | `/api/state` | Último evento de cada agente e aprovações pendentes |
 | `GET` | `/api/incidents` | Lista com filtros `status`, `sev`, `cluster`, `q`, `limit`, `offset`; inclui o estado do SLA |
 | `GET` | `/api/incidents/{id}` | Detalhe com logs, memória usada e linha do tempo |
 | `POST` | `/api/incidents/{id}/acknowledge` | Assumir o incidente (MTTA e SLA de reconhecimento) |
 | `POST` | `/api/simulate/incident` | `{"type": "OOMKilled" \| "CrashLoopBackOff" \| "ImagePullBackOff", "useAi": false}` |
 | `POST` | `/api/agents/approve/{id}` | Aprova; corpo opcional `{"motivo": "…"}` vira Lição |
-| `POST` | `/api/agents/reject/{id}` | Rejeita; corpo opcional `{"motivo": "…"}` vira Lição |
+| `POST` | `/api/agents/reject/{id}` | Rejeita; `{"motivo": "…"}` é **obrigatório** e vira Lição |
 | `POST` | `/api/test-communication` | Supervisor ↔ Monitor com dados reais (0 IA) |
 | `GET` | `/api/audit` | Trilha de auditoria (filtro `actor`) |
 | `GET` | `/api/audit/verify` | Recalcula a cadeia de hashes e aponta a primeira entrada adulterada |

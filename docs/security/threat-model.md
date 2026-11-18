@@ -40,7 +40,9 @@ flowchart LR
 | T5 | Bot escreve fora do vault ou enche o disco | Adulteração / DoS | Nomes saneados, caminho resolvido dentro do vault, limite de tamanho e de 30 notas/hora por bot | — |
 | T6 | Memória envenenada influencia decisões futuras | Adulteração | Notas de bot marcadas com `origem: bot`; rascunhos de runbook exigem revisão humana; nada na memória autoriza ação sem aprovação | Assinatura e revisão de lições (Fase 6) |
 | T7 | Túnel vira porta de entrada no VPS | Elevação | Usuário sem shell, `restrict`, `permitlisten` só da porta, `PermitOpen none`, UFW só do container | — |
-| T8 | Qualquer pessoa com acesso à UI aprova correções | Elevação / Repúdio | UI local (127.0.0.1) | Login, papéis, separação de deveres e auditoria imutável (Fases 1 e 2) |
+| T8 | Qualquer pessoa com acesso à UI aprova correções | Elevação / Repúdio | Login com sessão HttpOnly revogável, papéis, escopo por time, 2FA, separação de deveres, auditoria encadeada ([ADR 0009](../architecture/adr/0009-identidade-e-acesso.md)) | Eventos do WebSocket filtrados por escopo |
+| T13 | Adivinhar senhas | Spoofing | argon2id, política de senha, bloqueio após 5 falhas, falhas auditadas, 2FA opcional | Bloqueio compartilhado entre réplicas |
+| T14 | Requisição forjada a partir de outro site (CSRF) | Adulteração | `SameSite=Lax` e recusa de escritas de origens fora de `CORS_ORIGINS` | — |
 | T9 | Correção em loop agrava o incidente | DoS | Dedupe de 10 min, correlação por workload, escala limitada a 1–5 réplicas | Verificação pós-correção e limite de ações por janela (Fase 4) |
 | T10 | Dependência vulnerável | Vários | `pip-audit` e Dependabot no CI | — |
 | T11 | Segredo commitado | Divulgação | `.gitignore` estrito, gitleaks no CI e no pre-commit | — |

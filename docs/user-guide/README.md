@@ -2,6 +2,22 @@
 
 Para quem opera o Hermes Sentinel no dia a dia. Versão `0.1.x`.
 
+## Entrar
+
+- **Primeira vez:** a tela de login oferece criar o administrador da instalação.
+- **Login:** e-mail e senha, ou **Entrar com SSO** se a empresa configurou um provedor.
+- **2FA:** recomendado para quem aprova correções. Ative em **Minha conta** (Fase 3) ou pela API
+  `/api/auth/totp/setup`, com qualquer aplicativo autenticador (Google Authenticator, Authy, 1Password…).
+
+| Papel | Pode |
+|---|---|
+| Visualizador | acompanhar incidentes, relatórios e a saúde do cluster |
+| Operador | também reconhecer, aprovar, rejeitar e simular |
+| Auditor | acompanhar e consultar/exportar a auditoria |
+| Admin | tudo, inclusive usuários e times |
+
+Cada time enxerga e opera só os clusters e namespaces do seu escopo.
+
 ## A tela principal
 
 | Área | O que mostra |
@@ -26,15 +42,10 @@ Para quem opera o Hermes Sentinel no dia a dia. Versão `0.1.x`.
 1. O card aparece no Kanban e o Monitor dá o alerta.
 2. Acompanhe a investigação: os balões mostram o que o Hermes está lendo.
 3. Quando aparecer **Aprovação humana necessária**, leia a causa, as evidências e o **comando exato**.
-4. Clique em **Aprovar** para aplicar ou **Rejeitar** para não alterar nada.
+4. Escreva o **motivo** (obrigatório para rejeitar) e clique em **Aprovar** ou **Rejeitar**.
 
-**Dica: escreva o motivo.** Ele vira uma Lição que o time lê antes de investigar o próximo caso parecido. Enquanto a
-tela não tem o campo de motivo (Fase 3), envie pela API:
-
-```bash
-curl -X POST localhost:8000/api/agents/reject/INC-… -H 'Content-Type: application/json' \
-  -d '{"motivo": "Erro de configuração não se resolve reiniciando: crie o ConfigMap que falta."}'
-```
+O motivo vira uma Lição que o time lê antes de investigar o próximo caso parecido. Quem propôs uma correção não pode
+decidir sobre ela.
 
 ## Ações de correção
 

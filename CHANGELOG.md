@@ -33,11 +33,19 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
 - **Retomada após reinício**: pedidos de aprovação sobrevivem; investigações interrompidas recomeçam.
 - **Separação de deveres**: quem propõe uma correção não decide sobre ela.
 
+- **Login** com sessão HttpOnly revogável, primeira configuração do administrador e troca de senha.
+- **Papéis** Admin, Operador, Visualizador e Auditor, com **times e escopo** por cluster e namespace.
+- **2FA** (TOTP) opcional com segredo cifrado, e **SSO OIDC** (Authorization Code + PKCE).
+- Administração de usuários e times; tela de login com 2FA e SSO; botões de decisão conforme o papel.
+- Motivo obrigatório para rejeitar uma correção (na tela e na API).
+
 ### Segurança
 
 - Logs e eventos tratados como dados não confiáveis, com redação de segredos antes de qualquer envio.
 - Detecção de OOM por `exit 137` com limite de memória, quando o kernel mata um processo filho.
 - Ação desconhecida sugerida pela IA vira `none`: o sistema nunca chuta uma correção.
 - Testes de persistência rodam também contra PostgreSQL 17 no CI.
+- Senhas com argon2id, bloqueio após 5 falhas de login, falhas auditadas e recusa de escritas de outras origens (CSRF).
+- O último administrador não pode ser rebaixado nem desativado; mudanças de acesso derrubam as sessões.
 
 [Não lançado]: https://github.com/MathZiraA/Hermes-Sentinel-AIOps/commits/main
