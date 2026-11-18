@@ -10,19 +10,24 @@ import logging
 from contextlib import asynccontextmanager, suppress
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
 import mcp_server
 from agents.orchestrator import orchestrator
+from api import admin as admin_api
+from api import auth as auth_api
 from api import governance as governance_api
 from api import incidents as incidents_api
-from api.deps import Actor, current_actor
+from api.deps import Actor, actor_for, require, websocket_principal
 from config import settings
 from core.bus import bus
 from db import engine as db_engine
 from db import repository as repo
+from domain.permissions import Principal
+from identity import service as identity
 from integrations import obsidian
 from integrations.github_itsm import github_configured
 from integrations.hermes_client import hermes
@@ -87,6 +92,11 @@ async def lifespan(_: FastAPI):
     await repo.ensure_cluster(
         settings.cluster_id, settings.cluster_name or kube.get("context") or settings.cluster_id, kube.get("context")
     )
+    await identity.bootstrap_admin()
+    if settings.auth_enabled and await identity.count_users() == 0:
+        log.warning("nenhum usuário: abra a interface para criar o administrador (primeira configuração)")
+    if not settings.auth_enabled:
+        log.warning("AUTH_ENABLED=false: qualquer pessoa com acesso à porta age como administrador")
     await orchestrator.recover()
     await asyncio.to_thread(brain.ensure_vault)
     watcher.start(asyncio.get_running_loop())
@@ -110,26 +120,43 @@ app = FastAPI(
     description="AIOps para Kubernetes: detecção determinística, investigação pelo Hermes e remediação com aprovação humana.",
     lifespan=lifespan,
 )
+app.include_router(auth_api.router)
+app.include_router(admin_api.router)
 app.include_router(incidents_api.router)
 app.include_router(governance_api.router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=list(settings.cors_origins),
-    allow_methods=["GET", "POST"],
+    allow_credentials=True,  # cookie de sessão HttpOnly
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
     allow_headers=["Content-Type"],
 )
 
 
 # --------------------------------------------------------------------------- REST
-@app.get("/api/health")
-async def health() -> dict:
+@app.middleware("http")
+async def reject_cross_site_writes(request: Request, call_next):  # type: ignore[no-untyped-def]
+    """Defesa contra CSRF além do SameSite=Lax: escrita só de origens conhecidas."""
+    origin = request.headers.get("origin")
+    if request.method not in ("GET", "HEAD", "OPTIONS") and origin and origin not in settings.cors_origins:
+        return JSONResponse({"detail": "origem não permitida"}, status_code=403)
+    return await call_next(request)
+
+
+@app.get("/api/healthz", tags=["saúde"], summary="Liveness (público, sem detalhes)")
+async def healthz() -> dict:
+    return {"ok": True}
+
+
+@app.get("/api/health", tags=["saúde"])
+async def health(_: Annotated[Principal, Depends(require("health:read"))]) -> dict:
     data = await collect_health()
     await bus.publish_health(data)
     return data
 
 
 @app.get("/api/state")
-async def state() -> dict:
+async def state(_: Annotated[Principal, Depends(require("incidents:read"))]) -> dict:
     snap = bus.snapshot()
     snap["pendingApprovals"] = orchestrator.pending_approvals
     return snap
@@ -137,7 +164,7 @@ async def state() -> dict:
 
 @app.post("/api/simulate/incident", status_code=202, tags=["simulação"])
 async def simulate_incident(
-    actor: Annotated[Actor, Depends(current_actor)], req: SimulateRequest | None = None
+    actor: Annotated[Actor, Depends(actor_for("incidents:simulate"))], req: SimulateRequest | None = None
 ) -> dict:
     req = req or SimulateRequest()
     inc = orchestrator.simulate(req)
@@ -146,7 +173,7 @@ async def simulate_incident(
 
 
 @app.post("/api/test-communication", status_code=202)
-async def test_communication() -> dict:
+async def test_communication(_: Annotated[Principal, Depends(require("incidents:simulate"))]) -> dict:
     orchestrator._spawn(orchestrator.test_communication())  # guarda a referência da task
     return {"started": True}
 
@@ -154,6 +181,13 @@ async def test_communication() -> dict:
 # --------------------------------------------------------------------------- WebSocket
 @app.websocket("/ws/telemetry")
 async def telemetry(ws: WebSocket) -> None:
+    origin = ws.headers.get("origin")
+    if origin and origin not in settings.cors_origins:
+        await ws.close(code=4403)
+        return
+    if await websocket_principal(ws) is None:
+        await ws.close(code=4401)  # o frontend volta para a tela de login
+        return
     await bus.connect(ws)
     try:
         for approval in orchestrator.pending_approvals:

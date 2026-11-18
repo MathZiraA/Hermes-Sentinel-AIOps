@@ -10,7 +10,7 @@ import json
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import and_, false, func, or_, select
 
 from db import engine as db
 from db.models import AuditEntry, Cluster, IncidentEvent, IncidentRow, utcnow
@@ -138,8 +138,20 @@ async def list_incidents(
     query: str | None = None,
     limit: int = 50,
     offset: int = 0,
+    scopes: list[tuple[str, str]] | None = None,
 ) -> tuple[list[Incident], int]:
+    """`scopes`: pares (cluster, namespace) visíveis, com "*" como curinga. None = sem restrição."""
     stmt = select(IncidentRow)
+    if scopes is not None:
+        conds = []
+        for c, n in scopes:
+            parts = []
+            if c != "*":
+                parts.append(IncidentRow.cluster_id == c)
+            if n != "*":
+                parts.append(IncidentRow.namespace == n)
+            conds.append(and_(*parts) if parts else IncidentRow.id.isnot(None))
+        stmt = stmt.where(or_(*conds) if conds else false())
     if status:
         stmt = stmt.where(IncidentRow.status.in_(status))
     if sev:
@@ -271,10 +283,12 @@ async def export_audit(fmt: str = "json") -> str:
 
 
 # --------------------------------------------------------------------------- relatórios
-async def summary(days: int = 30, cluster: str | None = None, namespaces: list[str] | None = None) -> dict[str, Any]:
+async def summary(
+    days: int = 30, cluster: str | None = None, scopes: list[tuple[str, str]] | None = None
+) -> dict[str, Any]:
     """MTTA/MTTR, volume por severidade, status e serviço, e taxa de aprovação."""
     since = utcnow() - timedelta(days=days)
-    items, _ = await list_incidents(cluster=cluster, namespaces=namespaces, limit=200)
+    items, _ = await list_incidents(cluster=cluster, scopes=scopes, limit=200)
     items = [i for i in items if (_dt(i.detectedAt) or since) >= since and not i.simulated]
 
     def minutes(a: str | None, b: str | None) -> float | None:
