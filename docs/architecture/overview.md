@@ -111,8 +111,12 @@ Resumo; detalhes em [threat-model.md](../security/threat-model.md).
   [ADR 0005](adr/0005-menor-privilegio-por-bot.md)).
 - Logs e eventos redigidos e marcados como não confiáveis; Secrets nunca são lidos; ConfigMaps só mostram as chaves.
 
+## Persistência
+
+Incidentes, linha do tempo, clusters e auditoria ficam no banco (PostgreSQL em produção, SQLite na demo), com
+migrações Alembic aplicadas na subida. Detalhes e motivos no [ADR 0008](adr/0008-persistencia-ciclo-de-vida-auditoria.md).
+
 ## Limitações conhecidas (0.1.x)
 
-- Incidentes abertos vivem em memória: reiniciar o backend perde os que ainda não foram fechados (Fase 1).
 - Sem login nem papéis de usuário na interface (Fase 2).
 - Um cluster por instalação (Fase 7).

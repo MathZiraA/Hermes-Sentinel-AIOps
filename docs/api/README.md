@@ -11,11 +11,35 @@ http://localhost:8000/docs.
 |---|---|---|
 | `GET` | `/api/health` | Kubernetes, gateway do Hermes, Hermes Brain, GitHub, MCP e contadores de IA |
 | `GET` | `/api/state` | Último evento de cada agente e aprovações pendentes |
-| `GET` | `/api/incidents` | Incidentes da sessão (sem logs) |
+| `GET` | `/api/incidents` | Lista com filtros `status`, `sev`, `cluster`, `q`, `limit`, `offset`; inclui o estado do SLA |
+| `GET` | `/api/incidents/{id}` | Detalhe com logs, memória usada e linha do tempo |
+| `POST` | `/api/incidents/{id}/acknowledge` | Assumir o incidente (MTTA e SLA de reconhecimento) |
 | `POST` | `/api/simulate/incident` | `{"type": "OOMKilled" \| "CrashLoopBackOff" \| "ImagePullBackOff", "useAi": false}` |
 | `POST` | `/api/agents/approve/{id}` | Aprova; corpo opcional `{"motivo": "…"}` vira Lição |
 | `POST` | `/api/agents/reject/{id}` | Rejeita; corpo opcional `{"motivo": "…"}` vira Lição |
 | `POST` | `/api/test-communication` | Supervisor ↔ Monitor com dados reais (0 IA) |
+| `GET` | `/api/audit` | Trilha de auditoria (filtro `actor`) |
+| `GET` | `/api/audit/verify` | Recalcula a cadeia de hashes e aponta a primeira entrada adulterada |
+| `GET` | `/api/audit/export?format=json\|csv` | Exporta a auditoria completa |
+| `GET` | `/api/reports/summary?days=30` | MTTA, MTTR, volume por SEV, status, serviço e tipo, e decisões |
+| `GET` | `/api/clusters` | Clusters conhecidos e incidentes abertos em cada um |
+
+### Ciclo de vida e severidade
+
+| Status | Significado |
+|---|---|
+| `detected` | o Monitor abriu o incidente |
+| `acknowledged` | uma pessoa assumiu |
+| `investigating` | o Investigator está trabalhando |
+| `waiting_approval` | correção proposta, esperando decisão humana |
+| `remediating` | o Executor está aplicando |
+| `monitoring` | aplicado; conferindo se resolveu |
+| `resolved` / `postmortem` | resolvido / documentado no Hermes Brain |
+| `closed` | correção rejeitada, nada foi alterado |
+| `failed` | a correção falhou; precisa de um humano |
+
+SEV1 (fora do ar) a SEV4 (aviso antecipado) vêm do tipo de falha. Os prazos de SLA são configuráveis
+([configuração](../operations/configuration.md#banco-de-dados-e-sla)).
 
 ## WebSocket `/ws/telemetry`
 

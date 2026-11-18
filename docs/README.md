@@ -21,3 +21,4 @@
 | [0005](architecture/adr/0005-menor-privilegio-por-bot.md) | Um token por bot e permissões por papel |
 | [0006](architecture/adr/0006-hermes-brain-obsidian.md) | Memória do time num vault Obsidian |
 | [0007](architecture/adr/0007-produto-self-hosted.md) | Direção de produto: plataforma AIOps self-hosted |
+| [0008](architecture/adr/0008-persistencia-ciclo-de-vida-auditoria.md) | PostgreSQL, ciclo de vida explícito e auditoria encadeada |
