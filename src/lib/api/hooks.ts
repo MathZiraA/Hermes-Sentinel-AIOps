@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "./client";
 import type {
+  ActionInfo,
   AdminTeam,
   AdminUser,
   AuditEntry,
@@ -10,7 +11,10 @@ import type {
   IncidentDetail,
   IncidentSummary,
   Page,
+  Policy,
   ReportSummary,
+  Shift,
+  Silence,
 } from "./types";
 
 export interface IncidentFilters {
@@ -132,3 +136,19 @@ export function useIncidentActions(id: string) {
     }),
   };
 }
+
+export const useSilences = () =>
+  useQuery({ queryKey: ["silences"], queryFn: () => api.get<Silence[]>("/api/silences") });
+
+export const usePolicies = () =>
+  useQuery({ queryKey: ["policies"], queryFn: () => api.get<Policy[]>("/api/policies") });
+
+export const useShifts = () =>
+  useQuery({ queryKey: ["oncall"], queryFn: () => api.get<Shift[]>("/api/oncall") });
+
+export const useActions = () =>
+  useQuery({
+    queryKey: ["actions"],
+    queryFn: () => api.get<ActionInfo[]>("/api/actions"),
+    staleTime: Infinity,
+  });

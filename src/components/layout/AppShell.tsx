@@ -5,6 +5,7 @@ import {
   BarChart3,
   Brain,
   Building2,
+  CalendarClock,
   LayoutDashboard,
   Languages,
   LogOut,
@@ -41,6 +42,12 @@ const SECTIONS: { title: MessageKey; items: NavItem[] }[] = [
       { to: "/clusters", label: "nav.clusters", icon: Server, permission: "clusters:read" },
       { to: "/war-room", label: "nav.warRoom", icon: Building2, permission: "incidents:read" },
       { to: "/brain", label: "nav.brain", icon: Brain, permission: "brain:read" },
+      {
+        to: "/operations",
+        label: "nav.operations",
+        icon: CalendarClock,
+        permission: "incidents:read",
+      },
     ],
   },
   {

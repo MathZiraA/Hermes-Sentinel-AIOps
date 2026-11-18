@@ -11,9 +11,11 @@ from datetime import datetime
 from agents.base import executor, investigator, itsm, monitor, supervisor
 from config import settings
 from core.bus import bus
+from db import operations as ops
 from db import repository as repo
+from domain import actions as catalog
 from domain.lifecycle import OPEN, check_transition, severity_for
-from integrations import brain, obsidian
+from integrations import brain, notify, obsidian
 from integrations.github_itsm import create_issue, github_configured
 from integrations.hermes_client import hermes, tail_lines
 from k8s.client import K8sUnavailable, k8s
@@ -173,6 +175,10 @@ class Orchestrator:
                 deployment, logs, events = None, "(indisponível)", f"(describe falhou: {type(exc).__name__})"
             deployment = deployment or det.owner or None
             target = deployment or det.pod
+            silence = await ops.active_silence(settings.cluster_id, det.namespace, target, det.type)
+            if silence:
+                log.info("sinal silenciado (%s): %s em %s/%s", silence["reason"][:40], det.type, det.namespace, target)
+                continue
             existing = self._open_for(det.namespace, target)
             if existing:
                 signal = f"{det.type} em {det.kind}/{det.pod}: {det.reason}"
@@ -183,8 +189,17 @@ class Orchestrator:
                         "monitoring", f"Mais um sinal em {target}: {det.type}.", incident_id=existing.id, log=signal
                     )
                 continue
+            rollout = None
+            if deployment and det.kind in ("Pod", "Deployment"):
+                try:
+                    rollout = await asyncio.to_thread(k8s.recent_rollout, det.namespace, deployment)
+                except Exception:
+                    rollout = None
+                if rollout and (rollout.get("ageMinutes") or 1e9) > settings.deploy_correlation_minutes:
+                    rollout = None
             inc = Incident(
                 id=_new_id(),
+                rollout=rollout,
                 type=det.type,
                 namespace=det.namespace,
                 pod=det.pod,
@@ -226,6 +241,16 @@ class Orchestrator:
 
         # 1. Monitor detecta (determinístico)
         await self._mark(inc, f"Monitor detectou {inc.type} em {inc.namespace}/{inc.pod}{tag}")
+        if inc.rollout:
+            r = inc.rollout
+            await self._mark(
+                inc,
+                f"Começou {r.get('ageMinutes')} min depois do rollout da revisão {r.get('revision')} "
+                f"({', '.join(r.get('previousImages') or ['?'])} → {', '.join(r.get('images') or ['?'])})",
+                kind="deploy",
+            )
+        if not inc.simulated and inc.escalationLevel == 0:
+            await self.escalate(inc, 1)
         await monitor.emit(
             "alert",
             f"Alerta! {inc.type} em {target}{tag}",
@@ -323,26 +348,56 @@ class Orchestrator:
         await investigator.go_home()
         await self._request_approval(inc, rca)
 
-    async def _request_approval(self, inc: Incident, rca: dict) -> None:
-        card = lambda **kw: KanbanAction(cardId=inc.id, **kw)  # noqa: E731
-        action = (rca.get("recommendedAction") or {}).get("type", "rollout_restart")
-        replicas = (rca.get("recommendedAction") or {}).get("replicas") or 2
-        cmd = {
-            "rollout_restart": f"kubectl rollout restart deployment/{inc.deployment or inc.pod} -n {inc.namespace}",
-            "scale": f"kubectl scale deployment/{inc.deployment or inc.pod} --replicas={replicas} -n {inc.namespace}",
-            "delete_pod": f"kubectl delete pod {inc.pod} -n {inc.namespace}",
-            "none": "(nenhuma ação automática; correção manual recomendada)",
-        }[action if action in ("rollout_restart", "scale", "delete_pod", "none") else "rollout_restart"]
-        inc.approval = ApprovalRequest(
+    def _build_approval(self, inc: Incident, rca: dict) -> ApprovalRequest:
+        """Ação recomendada → pedido de aprovação validado pelo catálogo. Algo inválido vira correção manual."""
+        rec = dict(rca.get("recommendedAction") or {})
+        action = rec.get("type") or "none"
+        try:
+            params = catalog.validate(action, rec)
+        except catalog.InvalidAction as exc:
+            log.info("%s: ação %s recusada (%s); virou correção manual", inc.id, action, exc)
+            action, params = "none", {}
+            rec["reason"] = f"{rec.get('reason') or ''} (ação sugerida inválida: {exc})".strip()
+        workload = inc.deployment or inc.pod
+        cmd = catalog.command(
+            action, namespace=inc.namespace, workload=workload, pod=inc.pod, kind=inc.resourceKind, params=params
+        )
+        return ApprovalRequest(
             incidentId=inc.id,
             action=action,
+            params=params,
             command=cmd,
-            target=f"{inc.namespace}/{inc.deployment or inc.pod}",
-            description=(rca.get("recommendedAction") or {}).get("reason") or rca.get("rootCause", ""),
-            risk="baixo" if action in ("rollout_restart", "delete_pod") else "médio",
+            target=f"{inc.namespace}/{workload}" if inc.namespace else workload,
+            description=rec.get("reason") or rca.get("rootCause", ""),
+            risk=catalog.ACTIONS[action].risk,
             simulated=inc.simulated,
         )
+
+    async def _request_approval(self, inc: Incident, rca: dict) -> None:
+        card = lambda **kw: KanbanAction(cardId=inc.id, **kw)  # noqa: E731
+        inc.approval = self._build_approval(inc, rca)
+        cmd = inc.approval.command
         await self._set_status(inc, "waiting_approval")
+
+        # Autorremediação: só ações de baixo risco, só onde um Admin criou uma política, com limite por hora.
+        policy = None
+        if not inc.simulated and catalog.ACTIONS[inc.approval.action].auto_eligible:
+            policy = await ops.matching_policy(
+                inc.cluster, inc.namespace, inc.deployment or inc.pod, inc.type, inc.approval.action
+            )
+        if policy:
+            actor = f"politica:{policy['id'][:8]}"
+            inc.autoRemediatedBy = policy["id"]
+            await self._mark(
+                inc, f"Autorremediação pela política {policy['id'][:8]}: {cmd}", actor=actor, kind="decision"
+            )
+            await repo.audit(
+                actor, "remediation.auto_approve", inc.id, {"command": cmd, "policy": policy["id"], "sev": inc.sev}
+            )
+            await notify.notify("auto_remediated", inc, f"Correção automática aplicada pela política: {cmd}")
+            await self.approve(inc.id, "autorremediação por política", actor=actor)
+            return
+
         await executor.emit(
             "waiting_approval",
             "Correção pronta. Aguardando sua aprovação.",
@@ -353,6 +408,7 @@ class Orchestrator:
         )
         await supervisor.go_home("idle", "Aguardando aprovação humana para corrigir.")
         await self._mark(inc, f"Executor aguardando aprovação: {cmd}")
+        await notify.notify("waiting_approval", inc, f"Aguardando aprovação: {cmd}")
 
     # ------------------------------------------------------------------ entrada: proposta do Hermes (chat/MCP)
     async def propose_from_hermes(
@@ -364,7 +420,7 @@ class Orchestrator:
         root_cause: str,
         summary: str,
         evidence: list[str],
-        replicas: int | None,
+        params: dict | None = None,
     ) -> Incident:
         """O Hermes concluiu, numa conversa, que algo precisa de correção. Vira um card + pedido de aprovação."""
         pod = await asyncio.to_thread(k8s.first_pod_of, namespace, deployment) or deployment
@@ -385,7 +441,7 @@ class Orchestrator:
             "evidence": evidence,
             "confidence": "média",
             "source": "hermes-chat+mcp",
-            "recommendedAction": {"type": action, "replicas": replicas, "reason": root_cause},
+            "recommendedAction": {"type": action, **(params or {}), "reason": root_cause},
             "stakeholderSummary": summary,
             "followUps": [],
             "runbooks": [],
@@ -464,7 +520,8 @@ class Orchestrator:
         self._decide(inc, "approved", actor, reason)
         await self._mark(inc, f"{actor} aprovou: {inc.approval.command}", actor=actor, kind="decision")
         await self._set_status(inc, "remediating", actor)
-        self._spawn(self._learn(inc, "approved", reason))
+        if not actor.startswith("politica:"):  # autorremediação não vira lição
+            self._spawn(self._learn(inc, "approved", reason))
         await bus.publish({"type": "approval_resolved", "incidentId": inc.id, "decision": "approved"})
         self._spawn(self._execute(inc))
         return inc
@@ -488,6 +545,28 @@ class Orchestrator:
         self._spawn(self._close(inc))
         return inc
 
+    async def _apply(self, inc: Incident) -> str:
+        """Executa a ação aprovada no cluster (síncrono → thread)."""
+        a = inc.approval
+        assert a is not None  # noqa: S101 (garantido por _execute)
+        ns, name, p = inc.namespace, inc.deployment or inc.pod, a.params
+        handlers = {
+            "rollout_restart": lambda: k8s.rollout_restart(ns, name),
+            "scale": lambda: k8s.scale(ns, name, int(p["replicas"])),
+            "delete_pod": lambda: k8s.delete_pod(ns, inc.pod),
+            "rollout_undo": lambda: k8s.rollout_undo(ns, name),
+            "set_resources": lambda: k8s.set_resources(
+                ns,
+                name,
+                p["container"],
+                {k.split("_")[0]: v for k, v in p.items() if k in ("memory_limit", "cpu_limit")},
+            ),
+            "cordon": lambda: k8s.cordon(name),
+            "drain": lambda: k8s.drain(name),
+            "rerun_job": lambda: k8s.rerun_job(ns, name),
+        }
+        return await asyncio.to_thread(handlers[a.action])
+
     async def _execute(self, inc: Incident) -> None:
         if inc.approval is None:  # nunca deveria acontecer: approve() exige um pedido pendente
             raise RuntimeError(f"{inc.id} sem pedido de aprovação")
@@ -500,24 +579,26 @@ class Orchestrator:
             kanban=KanbanAction(op="move", cardId=inc.id, column="Corrigindo", agentId="executor", progress=80),
         )
         await asyncio.sleep(STEP)
+        verify = False
         try:
             if a.action == "none":
                 result = "nenhuma ação automática; seguir o runbook manualmente"
+                await self._set_status(inc, "resolved")
             elif inc.simulated:
                 result = f"[simulação] {a.command}: OK (cluster real não foi alterado)"
+                await self._set_status(inc, "resolved")
             else:
-                ns, name = inc.namespace, inc.deployment or inc.pod
-                if a.action == "rollout_restart":
-                    result = await asyncio.to_thread(k8s.rollout_restart, ns, name)
-                elif a.action == "scale":
-                    replicas = int((inc.rca or {}).get("recommendedAction", {}).get("replicas") or 2)
-                    result = await asyncio.to_thread(k8s.scale, ns, name, replicas)
-                else:
-                    result = await asyncio.to_thread(k8s.delete_pod, ns, inc.pod)
+                result = await self._apply(inc)
+                await self._set_status(inc, "monitoring")
+                verify = True
             inc.remediationResult = result
-            await self._set_status(inc, "resolved")
             await self._mark(inc, f"Executor: {result}")
-            await executor.emit("done", "Correção aplicada com sucesso.", incident_id=inc.id, log=result)
+            await executor.emit(
+                "done",
+                "Correção aplicada. Conferindo se resolveu…" if verify else "Correção aplicada com sucesso.",
+                incident_id=inc.id,
+                log=result,
+            )
         except (K8sUnavailable, Exception) as exc:
             inc.remediationResult = f"falhou: {exc}"
             await self._set_status(inc, "failed")
@@ -525,8 +606,54 @@ class Orchestrator:
             await executor.emit(
                 "error", "Não consegui aplicar. Precisa de um humano.", incident_id=inc.id, log=str(exc)[:500]
             )
+            await notify.notify("failed", inc, f"A correção falhou: {exc}")
         await asyncio.sleep(STEP)
         await executor.go_home()
+        if verify:
+            self._spawn(self._verify(inc))
+        else:
+            await self._close(inc)
+
+    # ------------------------------------------------------------------ verificação pós-correção
+    async def _verify(self, inc: Incident) -> None:
+        """Depois de aplicar, confere se o alvo ficou saudável. Se não ficou, reabre (uma vez) ou falha."""
+        kind = (
+            "node"
+            if inc.resourceKind == "Node"
+            else (
+                "job"
+                if (inc.approval and inc.approval.action == "rerun_job")
+                else (inc.resourceKind.lower() if inc.resourceKind in ("StatefulSet", "Deployment") else "deployment")
+            )
+        )
+        target = inc.deployment or inc.pod
+        await asyncio.sleep(settings.verify_delay_seconds)
+        ok, detail = False, "não verificado"
+        for attempt in range(1, max(1, settings.verify_attempts) + 1):
+            try:
+                ok, detail = await asyncio.to_thread(k8s.workload_healthy, kind, inc.namespace, target)
+            except Exception as exc:
+                ok, detail = False, f"verificação falhou: {type(exc).__name__}"
+            await self._mark(inc, f"Verificação {attempt}: {detail}", kind="verify")
+            if ok:
+                break
+            await asyncio.sleep(settings.verify_interval_seconds)
+        if ok:
+            await self._set_status(inc, "resolved")
+            await notify.notify("resolved", inc, f"Resolvido e verificado: {detail}")
+            await self._close(inc)
+            return
+        if inc.reopenCount == 0:
+            inc.reopenCount += 1
+            inc.related.append(f"a correção {inc.approval.action if inc.approval else '?'} não resolveu: {detail}")
+            await self._mark(inc, "A correção não resolveu: reabrindo para nova investigação", kind="status")
+            await self._set_status(inc, "investigating")
+            await notify.notify("reopened", inc, f"A correção não resolveu ({detail}); investigando de novo")
+            self._spawn(self.run_incident(inc, use_ai=True))
+            return
+        await self._mark(inc, f"A correção não resolveu de novo ({detail}); precisa de um humano", kind="status")
+        await self._set_status(inc, "failed")
+        await notify.notify("failed", inc, f"A correção não resolveu: {detail}")
         await self._close(inc)
 
     # ------------------------------------------------------------------ ITSM fecha o ciclo
@@ -570,6 +697,45 @@ class Orchestrator:
         await asyncio.sleep(STEP)
         await itsm.go_home()
         await supervisor.go_home()
+
+    # ------------------------------------------------------------------ plantão e escalonamento
+    async def escalate(self, inc: Incident, level: int) -> None:
+        """Nível 1: plantão primário · 2: secundário · 3: administradores. Sem plantão no nível, avisa o time."""
+        who: list[str] = []
+        if level <= 2:
+            oncall = await ops.responders(inc.cluster, inc.namespace)
+            who = oncall.get(level, []) or (oncall.get(1, []) if level == 2 else [])
+            if not who and level == 1:
+                who = await ops.team_members_for_scope(inc.cluster, inc.namespace)
+        if level >= 3 or not who:  # sem plantão nem time responsável: vai direto aos administradores
+            who = await ops.admins()
+            level = 3
+        inc.escalationLevel = level
+        inc.assignedTo = who
+        label = {1: "plantão primário", 2: "plantão secundário"}.get(level, "administradores")
+        await self._mark(inc, f"Escalonado para {label}: {', '.join(who) or 'ninguém cadastrado'}", kind="escalation")
+        await repo.audit("sistema", "incident.escalated", inc.id, {"level": level, "to": who, "sev": inc.sev})
+        await self._save(inc)
+        await notify.notify("escalated" if level > 1 else "opened", inc, f"{label}: {', '.join(who) or '—'}")
+
+    async def escalation_loop(self) -> None:
+        """Sem reconhecimento dentro do SLA: sobe um nível. Duas vezes o prazo: administradores."""
+        from domain.lifecycle import SlaPolicy
+
+        sla = SlaPolicy(settings.sla_ack_minutes, settings.sla_resolve_minutes)
+        while True:
+            await asyncio.sleep(settings.escalation_interval_seconds)
+            now = datetime.now().astimezone()
+            for inc in list(self.incidents.values()):
+                if inc.simulated or inc.acknowledgedAt or inc.status not in OPEN:
+                    continue
+                detected = datetime.fromisoformat(inc.detectedAt)
+                due = sla.ack_due(inc.sev, detected)
+                window = due - detected
+                if now >= due + window and inc.escalationLevel < 3:
+                    await self.escalate(inc, 3)
+                elif now >= due and inc.escalationLevel < 2:
+                    await self.escalate(inc, 2)
 
     # ------------------------------------------------------------------ subida: retomar o que ficou aberto
     async def recover(self) -> int:

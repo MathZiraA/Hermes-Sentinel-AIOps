@@ -17,6 +17,7 @@ import { Route as AppAccountRouteImport } from './routes/_app.account'
 import { Route as AppAuditRouteImport } from './routes/_app.audit'
 import { Route as AppBrainRouteImport } from './routes/_app.brain'
 import { Route as AppClustersRouteImport } from './routes/_app.clusters'
+import { Route as AppOperationsRouteImport } from './routes/_app.operations'
 import { Route as AppReportsRouteImport } from './routes/_app.reports'
 import { Route as AppWarRoomRouteImport } from './routes/_app.war-room'
 import { Route as AppAdminTeamsRouteImport } from './routes/_app.admin.teams'
@@ -63,6 +64,11 @@ const AppClustersRoute = AppClustersRouteImport.update({
   path: '/clusters',
   getParentRoute: () => AppRoute,
 } as any)
+const AppOperationsRoute = AppOperationsRouteImport.update({
+  id: '/operations',
+  path: '/operations',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppReportsRoute = AppReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
@@ -102,6 +108,7 @@ export interface FileRoutesByFullPath {
   '/audit': typeof AppAuditRoute
   '/brain': typeof AppBrainRoute
   '/clusters': typeof AppClustersRoute
+  '/operations': typeof AppOperationsRoute
   '/reports': typeof AppReportsRoute
   '/war-room': typeof AppWarRoomRoute
   '/admin/teams': typeof AppAdminTeamsRoute
@@ -116,6 +123,7 @@ export interface FileRoutesByTo {
   '/audit': typeof AppAuditRoute
   '/brain': typeof AppBrainRoute
   '/clusters': typeof AppClustersRoute
+  '/operations': typeof AppOperationsRoute
   '/reports': typeof AppReportsRoute
   '/war-room': typeof AppWarRoomRoute
   '/': typeof AppIndexRoute
@@ -133,6 +141,7 @@ export interface FileRoutesById {
   '/_app/audit': typeof AppAuditRoute
   '/_app/brain': typeof AppBrainRoute
   '/_app/clusters': typeof AppClustersRoute
+  '/_app/operations': typeof AppOperationsRoute
   '/_app/reports': typeof AppReportsRoute
   '/_app/war-room': typeof AppWarRoomRoute
   '/_app/': typeof AppIndexRoute
@@ -151,6 +160,7 @@ export interface FileRouteTypes {
     | '/audit'
     | '/brain'
     | '/clusters'
+    | '/operations'
     | '/reports'
     | '/war-room'
     | '/admin/teams'
@@ -165,6 +175,7 @@ export interface FileRouteTypes {
     | '/audit'
     | '/brain'
     | '/clusters'
+    | '/operations'
     | '/reports'
     | '/war-room'
     | '/'
@@ -181,6 +192,7 @@ export interface FileRouteTypes {
     | '/_app/audit'
     | '/_app/brain'
     | '/_app/clusters'
+    | '/_app/operations'
     | '/_app/reports'
     | '/_app/war-room'
     | '/_app/'
@@ -254,6 +266,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppClustersRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/operations': {
+      id: '/_app/operations'
+      path: '/operations'
+      fullPath: '/operations'
+      preLoaderRoute: typeof AppOperationsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/reports': {
       id: '/_app/reports'
       path: '/reports'
@@ -304,6 +323,7 @@ interface AppRouteChildren {
   AppAuditRoute: typeof AppAuditRoute
   AppBrainRoute: typeof AppBrainRoute
   AppClustersRoute: typeof AppClustersRoute
+  AppOperationsRoute: typeof AppOperationsRoute
   AppReportsRoute: typeof AppReportsRoute
   AppWarRoomRoute: typeof AppWarRoomRoute
   AppIndexRoute: typeof AppIndexRoute
@@ -318,6 +338,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppAuditRoute: AppAuditRoute,
   AppBrainRoute: AppBrainRoute,
   AppClustersRoute: AppClustersRoute,
+  AppOperationsRoute: AppOperationsRoute,
   AppReportsRoute: AppReportsRoute,
   AppWarRoomRoute: AppWarRoomRoute,
   AppIndexRoute: AppIndexRoute,

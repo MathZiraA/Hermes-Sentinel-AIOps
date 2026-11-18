@@ -397,5 +397,145 @@ class K8sService:
         self.core.delete_namespaced_pod(pod, namespace, _request_timeout=10)
         return f"pod/{pod} removido (o controller recria)"
 
+    # ------------------------------------------------------------------ ações da Fase 4 (exigem aprovação)
+    def _replica_sets(self, namespace: str, deployment: str) -> list[Any]:
+        dep = self.apps.read_namespaced_deployment(deployment, namespace, _request_timeout=10)
+        selector = ",".join(f"{k}={v}" for k, v in (dep.spec.selector.match_labels or {}).items())
+        sets = self.apps.list_namespaced_replica_set(namespace, label_selector=selector, _request_timeout=10).items
+        owned = [
+            rs
+            for rs in sets
+            if any(o.kind == "Deployment" and o.name == deployment for o in rs.metadata.owner_references or [])
+        ]
+        rev = lambda rs: int((rs.metadata.annotations or {}).get("deployment.kubernetes.io/revision", "0"))  # noqa: E731
+        return sorted(owned, key=rev, reverse=True)
+
+    def recent_rollout(self, namespace: str, deployment: str) -> dict[str, Any] | None:
+        """Última revisão do deployment: quando entrou e o que mudou na imagem (correlação com deploys)."""
+        sets = self._replica_sets(namespace, deployment)
+        if not sets:
+            return None
+        cur = sets[0]
+        prev = sets[1] if len(sets) > 1 else None
+        img = lambda rs: [c.image for c in rs.spec.template.spec.containers]  # noqa: E731
+        created = cur.metadata.creation_timestamp
+        return {
+            "revision": (cur.metadata.annotations or {}).get("deployment.kubernetes.io/revision"),
+            "previousRevision": (prev.metadata.annotations or {}).get("deployment.kubernetes.io/revision")
+            if prev
+            else None,
+            "images": img(cur),
+            "previousImages": img(prev) if prev else [],
+            "createdAt": created.isoformat() if created else None,
+            "ageMinutes": round((datetime.now(UTC) - created).total_seconds() / 60, 1) if created else None,
+        }
+
+    def rollout_undo(self, namespace: str, deployment: str) -> str:
+        """Equivalente a `kubectl rollout undo`: volta o template para a revisão anterior."""
+        sets = self._replica_sets(namespace, deployment)
+        if len(sets) < 2:
+            raise ValueError(f"deployment/{deployment} não tem revisão anterior para voltar")
+        prev = sets[1]
+        template = self.apps.api_client.sanitize_for_serialization(prev.spec.template)
+        template.get("metadata", {}).get("labels", {}).pop("pod-template-hash", None)
+        self.apps.patch_namespaced_deployment(
+            deployment, namespace, {"spec": {"template": template}}, _request_timeout=10
+        )
+        rev = (prev.metadata.annotations or {}).get("deployment.kubernetes.io/revision")
+        return f"deployment/{deployment} voltou para a revisão {rev}"
+
+    def set_resources(
+        self,
+        namespace: str,
+        deployment: str,
+        container: str,
+        limits: dict[str, str],
+        requests: dict[str, str] | None = None,
+    ) -> str:
+        """Ajusta limites/pedidos de CPU e memória de um container (patch estratégico pelo nome)."""
+        resources: dict[str, Any] = {"limits": limits}
+        if requests:
+            resources["requests"] = requests
+        body = {"spec": {"template": {"spec": {"containers": [{"name": container, "resources": resources}]}}}}
+        self.apps.patch_namespaced_deployment(deployment, namespace, body, _request_timeout=10)
+        return f"deployment/{deployment} container {container}: limits={limits}" + (
+            f" requests={requests}" if requests else ""
+        )
+
+    def cordon(self, node: str, unschedulable: bool = True) -> str:
+        self.core.patch_node(node, {"spec": {"unschedulable": unschedulable}}, _request_timeout=10)
+        return f"node/{node} {'isolado (cordon)' if unschedulable else 'liberado (uncordon)'}"
+
+    def drain(self, node: str) -> str:
+        """cordon + despejo (Eviction API, respeita PodDisruptionBudgets) dos pods que não são DaemonSet."""
+        self.cordon(node)
+        pods = self.core.list_pod_for_all_namespaces(field_selector=f"spec.nodeName={node}", _request_timeout=10).items
+        evicted, skipped = 0, 0
+        for p in pods:
+            owners = p.metadata.owner_references or []
+            if any(o.kind == "DaemonSet" for o in owners) or "kubernetes.io/config.mirror" in (
+                p.metadata.annotations or {}
+            ):
+                skipped += 1
+                continue
+            body = client.V1Eviction(metadata=client.V1ObjectMeta(name=p.metadata.name, namespace=p.metadata.namespace))
+            self.core.create_namespaced_pod_eviction(p.metadata.name, p.metadata.namespace, body, _request_timeout=10)
+            evicted += 1
+        return f"node/{node} drenado: {evicted} pod(s) despejado(s), {skipped} ignorado(s) (DaemonSet/mirror)"
+
+    def rerun_job(self, namespace: str, job: str) -> str:
+        """Cria um Job novo com o mesmo template (o Job original falhou e não roda de novo sozinho)."""
+        batch = self._client("BatchV1Api")
+        old = batch.read_namespaced_job(job, namespace, _request_timeout=10)
+        template = self.apps.api_client.sanitize_for_serialization(old.spec.template)
+        for key in ("controller-uid", "batch.kubernetes.io/controller-uid", "job-name", "batch.kubernetes.io/job-name"):
+            template.get("metadata", {}).get("labels", {}).pop(key, None)
+        name = f"{job[:40]}-rerun-{datetime.now(UTC).strftime('%H%M%S')}"
+        body = {
+            "apiVersion": "batch/v1",
+            "kind": "Job",
+            "metadata": {
+                "name": name,
+                "namespace": namespace,
+                "labels": {**(old.metadata.labels or {}), "sentinel/rerun-of": job},
+            },
+            "spec": {"backoffLimit": old.spec.backoff_limit, "template": template},
+        }
+        batch.create_namespaced_job(namespace, body, _request_timeout=10)
+        return f"job/{name} criado a partir de job/{job}"
+
+    # ------------------------------------------------------------------ verificação pós-correção
+    def workload_healthy(self, kind: str, namespace: str, name: str) -> tuple[bool, str]:
+        """O alvo da correção está saudável agora? Devolve (ok, explicação)."""
+        kind = kind.lower()
+        if kind in ("deployment", "pod"):
+            d = self.apps.read_namespaced_deployment(name, namespace, _request_timeout=10)
+            desired = d.spec.replicas if d.spec.replicas is not None else 1
+            ready, updated = d.status.ready_replicas or 0, d.status.updated_replicas or 0
+            return ready >= desired and updated >= desired, f"{ready}/{desired} prontas, {updated} atualizadas"
+        if kind == "statefulset":
+            st = self.apps.read_namespaced_stateful_set(name, namespace, _request_timeout=10)
+            desired = st.spec.replicas if st.spec.replicas is not None else 1
+            ready = st.status.ready_replicas or 0
+            return ready >= desired, f"{ready}/{desired} prontas"
+        if kind == "node":
+            n = self.core.read_node(name, _request_timeout=10)
+            conds = {c.type: c.status for c in n.status.conditions or []}
+            bad = [t for t in ("MemoryPressure", "DiskPressure", "PIDPressure") if conds.get(t) == "True"]
+            ok = conds.get("Ready") == "True" and not bad
+            return ok, "Ready" if ok else f"Ready={conds.get('Ready')} {' '.join(bad)}"
+        if kind == "job":
+            batch = self._client("BatchV1Api")
+            jobs = batch.list_namespaced_job(
+                namespace, label_selector=f"sentinel/rerun-of={name}", _request_timeout=10
+            ).items
+            if not jobs:
+                return False, "nenhuma reexecução encontrada"
+            last = max(jobs, key=lambda j: j.metadata.creation_timestamp)
+            if last.status.succeeded:
+                return True, f"job/{last.metadata.name} concluído"
+            return False, f"job/{last.metadata.name}: ativos={last.status.active} falhas={last.status.failed}"
+        return True, f"sem verificação automática para {kind}"
+
 
 k8s = K8sService()

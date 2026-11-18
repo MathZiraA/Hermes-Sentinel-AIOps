@@ -15,13 +15,14 @@ READ = frozenset({"incidents:read", "reports:read", "clusters:read", "brain:read
 PERMISSIONS: dict[str, frozenset[str]] = {
     "viewer": READ,
     "auditor": READ | {"audit:read"},
-    "operator": READ | {"incidents:ack", "incidents:decide", "incidents:simulate", "brain:write"},
+    "operator": READ | {"incidents:ack", "incidents:decide", "incidents:simulate", "brain:write", "silences:manage"},
     "admin": READ
     | {
         "incidents:ack",
         "incidents:decide",
         "incidents:simulate",
         "brain:write",
+        "silences:manage",
         "audit:read",
         "users:manage",
         "teams:manage",

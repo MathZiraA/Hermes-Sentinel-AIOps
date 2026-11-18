@@ -76,6 +76,17 @@ export interface IncidentSummary {
     simulated: boolean;
   } | null;
   remediationResult: string | null;
+  assignedTo: string[];
+  escalationLevel: number;
+  reopenCount: number;
+  autoRemediatedBy: string | null;
+  rollout: {
+    revision: string | null;
+    previousRevision: string | null;
+    images: string[];
+    previousImages: string[];
+    ageMinutes: number | null;
+  } | null;
   postmortemPath: string | null;
   issueUrl: string | null;
   sla: Sla;
@@ -178,4 +189,47 @@ export interface BrainGraph {
 export interface HealthCheck {
   ok: boolean;
   detail?: string;
+}
+
+export interface Silence {
+  id: string;
+  cluster: string;
+  namespace: string;
+  workload: string;
+  type: string;
+  startsAt: string;
+  endsAt: string;
+  active: boolean;
+  reason: string;
+  createdBy: string;
+}
+
+export interface Policy {
+  id: string;
+  cluster: string;
+  namespace: string;
+  workload: string;
+  type: string;
+  action: string;
+  maxPerHour: number;
+  enabled: boolean;
+  createdBy: string;
+}
+
+export interface Shift {
+  id: number;
+  teamId: string;
+  team: string;
+  user: string;
+  level: number;
+  startsAt: string;
+  endsAt: string;
+}
+
+export interface ActionInfo {
+  id: string;
+  label: string;
+  risk: string;
+  autoEligible: boolean;
+  description: string;
 }

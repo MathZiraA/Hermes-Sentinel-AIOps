@@ -48,6 +48,15 @@ Gere tokens com `openssl rand -hex 32`. Permissões de cada papel: [docs/api](..
 | `SENTINEL_CLUSTER_ID` | `local` | Identificador deste cluster no Sentinel |
 | `SENTINEL_CLUSTER_NAME` | contexto do kubeconfig | Nome exibido |
 
+## Operação
+
+| Variável | Padrão | Descrição |
+|---|---|---|
+| `VERIFY_DELAY_SECONDS` | `90` | Espera antes de conferir se a correção resolveu |
+| `VERIFY_ATTEMPTS` / `VERIFY_INTERVAL_SECONDS` | `3` / `30` | Quantas conferências e o intervalo entre elas |
+| `ESCALATION_INTERVAL_SECONDS` | `30` | Frequência da checagem de escalonamento |
+| `DEPLOY_CORRELATION_MINUTES` | `60` | Janela para ligar um incidente ao último rollout do workload |
+
 ## Identidade e acesso
 
 | Variável | Padrão | Descrição |

@@ -179,6 +179,28 @@ function IncidentPage() {
         )}
       </header>
 
+      {(inc.rollout || inc.reopenCount > 0 || inc.autoRemediatedBy) && (
+        <div className="mb-6 flex flex-col gap-2">
+          {inc.rollout && (
+            <p className="rounded-lg border border-sev2/40 bg-sev2/10 px-3 py-2 text-sm">
+              <b>{t("incident.rollout")}:</b> revisão {inc.rollout.revision} há{" "}
+              {inc.rollout.ageMinutes} {t("common.minutes")} (
+              {inc.rollout.previousImages.join(", ") || "?"} → {inc.rollout.images.join(", ")})
+            </p>
+          )}
+          {inc.reopenCount > 0 && (
+            <p className="rounded-lg border border-sev2/40 bg-sev2/10 px-3 py-2 text-sm">
+              {t("incident.reopened")}
+            </p>
+          )}
+          {inc.autoRemediatedBy && (
+            <p className="rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm">
+              {t("incident.auto")}
+            </p>
+          )}
+        </div>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="flex flex-col gap-6 lg:col-span-2">
           {inc.status === "waiting_approval" && <DecisionPanel inc={inc} />}
@@ -254,6 +276,14 @@ function IncidentPage() {
         <aside className="flex flex-col gap-6">
           <Panel>
             <dl className="grid gap-3">
+              {!!inc.assignedTo.length && (
+                <Field label={t("incident.assigned")}>
+                  {inc.assignedTo.join(", ")}
+                  <span className="block text-xs text-muted-foreground">
+                    {t("incident.escalation")}: {inc.escalationLevel}/3
+                  </span>
+                </Field>
+              )}
               <Field label={t("incident.confidence")}>{rca?.confidence ?? "—"}</Field>
               <Field label={t("incident.source")}>{rca?.source ?? "—"}</Field>
               <Field label="Sinal">{inc.reason}</Field>

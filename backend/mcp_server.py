@@ -25,6 +25,7 @@ from mcp.server.mcpserver.exceptions import ToolError
 from mcp.server.transport_security import TransportSecuritySettings
 
 from config import settings
+from domain import actions as catalog
 from integrations import brain, obsidian
 from integrations.hermes_client import redact, tail_lines
 from k8s.client import k8s
@@ -32,7 +33,8 @@ from k8s.client import k8s
 log = logging.getLogger("sentinel.mcp")
 
 DNS1123 = re.compile(r"^[a-z0-9]([-a-z0-9.]{0,251}[a-z0-9])?$")
-ACTIONS = ("rollout_restart", "scale", "delete_pod", "none")
+# Ações que fazem sentido para um deployment numa conversa (nó e job ficam com o fluxo automático)
+CHAT_ACTIONS = ("rollout_restart", "scale", "rollout_undo", "set_resources", "none")
 SKIP_NS = {"kube-system", "kube-public", "kube-node-lease", "local-path-storage"}
 
 MEMORY = {"memoria_buscar", "memoria_ler", "memoria_registrar"}
@@ -359,20 +361,27 @@ async def propor_correcao(
     resumo_stakeholder: str = "",
     evidencias: list[str] | None = None,
     replicas: int = 0,
+    container: str = "",
+    memory_limit: str = "",
+    cpu_limit: str = "",
 ) -> dict[str, Any]:
     """Cria um pedido de aprovação na tela do Sentinel. NÃO altera o cluster.
 
-    acao: rollout_restart | scale | delete_pod | none. `replicas` só vale para scale (1 a 5).
+    acao: rollout_restart | scale (replicas 1 a 5) | rollout_undo (volta o último deploy) |
+    set_resources (container + memory_limit ex. "512Mi" e/ou cpu_limit ex. "500m") | none.
     Use quando, numa conversa, você concluir que uma correção é necessária.
     """
     from agents.orchestrator import orchestrator  # import tardio: evita ciclo
 
     _authorize(ctx, "propor_correcao")
     ns, dep = _check_ns(namespace), _check_name(deployment, "deployment")
-    if acao not in ACTIONS:
-        raise ToolError(f"ação inválida. Use uma de: {', '.join(ACTIONS)}")
-    if acao == "scale" and not 1 <= int(replicas or 0) <= 5:
-        raise ToolError("scale exige replicas entre 1 e 5")
+    if acao not in CHAT_ACTIONS:
+        raise ToolError(f"ação inválida. Use uma de: {', '.join(CHAT_ACTIONS)}")
+    params = {"replicas": replicas, "container": container, "memory_limit": memory_limit, "cpu_limit": cpu_limit}
+    try:
+        catalog.validate(acao, params)
+    except catalog.InvalidAction as exc:
+        raise ToolError(str(exc)) from exc
     exists = await asyncio.to_thread(_deployment_exists, ns, dep)
     if not exists:
         raise ToolError(f"deployment/{dep} não existe em {ns}")
@@ -383,7 +392,7 @@ async def propor_correcao(
         root_cause=str(causa_raiz)[:400],
         summary=str(resumo_stakeholder)[:200],
         evidence=[str(e)[:200] for e in (evidencias or [])][:6],
-        replicas=int(replicas or 0) or None,
+        params=params,
     )
     return {
         "incidentId": inc.id,
