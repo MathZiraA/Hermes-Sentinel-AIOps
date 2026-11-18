@@ -6,6 +6,8 @@
 /** Backend. Sobrescreva com VITE_SENTINEL_API_URL / VITE_SENTINEL_WS_URL. */
 export function apiBase(): string {
   const env = import.meta.env["VITE_SENTINEL_API_URL"] as string | undefined;
+  // "same-origin": interface e API atrás do mesmo proxy (Docker Compose / Helm com Ingress)
+  if (env === "same-origin" && typeof window !== "undefined") return window.location.origin;
   if (env) return env.replace(/\/$/, "");
   const host = typeof window !== "undefined" ? window.location.hostname : "localhost";
   return `http://${host}:8000`;

@@ -1,0 +1,61 @@
+# Hermes Sentinel com Docker Compose (uma VM). Ver docs/operations/deploy-compose.md.
+#   cp deploy/compose/.env.example deploy/compose/.env   # e preencha
+#   docker compose -f deploy/compose/docker-compose.yml --env-file deploy/compose/.env up -d
+name: hermes-sentinel
+
+services:
+  postgres:
+    image: docker.io/library/postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sentinel
+      POSTGRES_USER: sentinel
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sentinel -d sentinel"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build:
+      context: ../..
+      dockerfile: backend/Dockerfile
+    image: hermes-sentinel/backend:${SENTINEL_VERSION:-1.0.0}
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://sentinel:${POSTGRES_PASSWORD}@postgres:5432/sentinel
+      KUBECONFIG_PATH: /kube/config
+      CORS_ORIGINS: ${PUBLIC_URL:-http://localhost:8080}
+      FRONTEND_URL: ${PUBLIC_URL:-http://localhost:8080}
+      OIDC_REDIRECT_URI: ${PUBLIC_URL:-http://localhost:8080}/api/auth/oidc/callback
+    volumes:
+      - brain:/data/brain
+      - ${KUBECONFIG_FILE:-~/.kube/config}:/kube/config:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    image: hermes-sentinel/web:${SENTINEL_VERSION:-1.0.0}
+    restart: unless-stopped
+    depends_on: [backend]
+
+  proxy:
+    image: docker.io/library/caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "${PUBLIC_PORT:-8080}:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on: [backend, web]
+
+volumes:
+  pgdata:
+  brain:
