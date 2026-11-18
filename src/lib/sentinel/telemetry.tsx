@@ -1,38 +1,17 @@
 import { createContext, useContext, useEffect, useMemo, useReducer, type ReactNode } from "react";
 import { initialTelemetry, telemetryReducer, type TelemetryState } from "./reducer";
 import type { IncidentType, ServerMessage } from "./types";
-
-/** Backend local. Sobrescreva com VITE_SENTINEL_API_URL / VITE_SENTINEL_WS_URL. */
-function apiBase(): string {
-  const env = import.meta.env["VITE_SENTINEL_API_URL"] as string | undefined;
-  if (env) return env.replace(/\/$/, "");
-  const host = typeof window !== "undefined" ? window.location.hostname : "localhost";
-  return `http://${host}:8000`;
-}
-
-function wsUrl(): string {
-  const env = import.meta.env["VITE_SENTINEL_WS_URL"] as string | undefined;
-  return env ?? apiBase().replace(/^http/, "ws") + "/ws/telemetry";
-}
-
-async function post<T = unknown>(path: string, body?: unknown): Promise<T> {
-  const init: RequestInit = { method: "POST" };
-  if (body !== undefined) {
-    init.headers = { "Content-Type": "application/json" };
-    init.body = JSON.stringify(body);
-  }
-  const res = await fetch(`${apiBase()}${path}`, init);
-  if (!res.ok) throw new Error(`${path}: HTTP ${res.status}`);
-  return (await res.json()) as T;
-}
+import { api, wsUrl } from "@/lib/api/client";
 
 export const sentinelApi = {
-  testCommunication: () => post("/api/test-communication"),
+  testCommunication: () => api.post("/api/test-communication"),
   simulateIncident: (type: IncidentType, useAi: boolean) =>
-    post("/api/simulate/incident", { type, useAi }),
-  approve: (incidentId: string) => post(`/api/agents/approve/${encodeURIComponent(incidentId)}`),
-  reject: (incidentId: string) => post(`/api/agents/reject/${encodeURIComponent(incidentId)}`),
-  refreshHealth: () => fetch(`${apiBase()}/api/health`).then((r) => r.json()),
+    api.post("/api/simulate/incident", { type, useAi }),
+  approve: (incidentId: string, motivo = "") =>
+    api.post(`/api/agents/approve/${encodeURIComponent(incidentId)}`, { motivo }),
+  reject: (incidentId: string, motivo = "") =>
+    api.post(`/api/agents/reject/${encodeURIComponent(incidentId)}`, { motivo }),
+  refreshHealth: () => api.get("/api/health"),
 };
 
 const TelemetryContext = createContext<TelemetryState>(initialTelemetry);
@@ -72,9 +51,10 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
           /* mensagem inválida: ignora */
         }
       };
-      ws.onclose = () => {
+      ws.onclose = (ev) => {
         clearInterval(pingTimer);
         dispatch({ kind: "connection", state: "closed" });
+        if (ev.code === 4401 || ev.code === 4403) return; // sem sessão: o RequireAuth leva ao login
         scheduleReconnect();
       };
       ws.onerror = () => ws?.close();

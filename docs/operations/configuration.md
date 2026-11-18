@@ -48,6 +48,22 @@ Gere tokens com `openssl rand -hex 32`. Permissões de cada papel: [docs/api](..
 | `SENTINEL_CLUSTER_ID` | `local` | Identificador deste cluster no Sentinel |
 | `SENTINEL_CLUSTER_NAME` | contexto do kubeconfig | Nome exibido |
 
+## Identidade e acesso
+
+| Variável | Padrão | Descrição |
+|---|---|---|
+| `AUTH_ENABLED` | `true` | `false` só para demonstração local: todos agem como administrador |
+| `SENTINEL_SECRET_KEY` | gerada em `backend/data/secret.key` | Cifra os segredos de 2FA e o estado do SSO. **Defina em produção** (`openssl rand -base64 48`) |
+| `SESSION_TTL_HOURS` | `12` | Duração da sessão |
+| `COOKIE_SECURE` | `false` | `true` atrás de HTTPS (obrigatório em produção) |
+| `SENTINEL_ADMIN_EMAIL` / `SENTINEL_ADMIN_PASSWORD` | — | Cria o primeiro administrador na subida, se não houver usuários. Sem eles, a interface oferece a configuração inicial |
+| `OIDC_ISSUER` | — | URL do provedor (ex.: `https://keycloak.empresa.com/realms/ops`). Vazio = SSO desligado |
+| `OIDC_CLIENT_ID` / `OIDC_CLIENT_SECRET` | — | Credenciais do cliente OIDC |
+| `OIDC_REDIRECT_URI` | `http://localhost:8000/api/auth/oidc/callback` | Cadastre a mesma URL no provedor |
+| `OIDC_DEFAULT_ROLE` | `viewer` | Papel de quem entra pelo SSO pela primeira vez |
+| `OIDC_ALLOWED_DOMAINS` | — | Domínios de e-mail aceitos, separados por vírgula |
+| `FRONTEND_URL` | `http://localhost:3000` | Para onde o SSO volta depois do login |
+
 ## Memória e integrações
 
 | Variável | Padrão | Descrição |

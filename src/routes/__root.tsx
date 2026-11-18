@@ -12,6 +12,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { AuthProvider } from "@/lib/auth/auth";
 
 function NotFoundComponent() {
   return (
@@ -81,14 +82,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Agent Factory" },
-      { name: "description", content: "Isometric dashboard for managing AI agents." },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Agent Factory" },
-      { property: "og:description", content: "Isometric dashboard for managing AI agents." },
+      { title: "Hermes Sentinel" },
+      {
+        name: "description",
+        content:
+          "AIOps para Kubernetes com time de agentes, aprovação humana e memória que aprende.",
+      },
+      { property: "og:title", content: "Hermes Sentinel" },
+      {
+        property: "og:description",
+        content:
+          "AIOps para Kubernetes com time de agentes, aprovação humana e memória que aprende.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
     ],
     links: [
       {
@@ -112,7 +119,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="pt-BR">
       <head>
         <HeadContent />
       </head>
@@ -129,8 +136,10 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      <AuthProvider>
+        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+        <Outlet />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

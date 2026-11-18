@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { KanbanOverlay } from "@/components/office/KanbanOverlay";
 import { OfficeScene } from "@/components/office/OfficeScene";
 import { SystemSidebar } from "@/components/office/SystemSidebar";
+import { RequireAuth } from "@/components/auth/RequireAuth";
 import { TelemetryProvider } from "@/lib/sentinel/telemetry";
 
 export const Route = createFileRoute("/")({
@@ -28,19 +29,21 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   return (
-    <TelemetryProvider>
-      <main className="flex h-screen w-screen overflow-hidden bg-background">
-        <section
-          className="relative h-full w-3/4 min-w-0"
-          aria-label="Escritório isométrico dos agentes"
-        >
-          <OfficeScene />
-          <KanbanOverlay />
-        </section>
-        <div className="h-full w-1/4 min-w-[300px]">
-          <SystemSidebar />
-        </div>
-      </main>
-    </TelemetryProvider>
+    <RequireAuth>
+      <TelemetryProvider>
+        <main className="flex h-screen w-screen overflow-hidden bg-background">
+          <section
+            className="relative h-full w-3/4 min-w-0"
+            aria-label="Escritório isométrico dos agentes"
+          >
+            <OfficeScene />
+            <KanbanOverlay />
+          </section>
+          <div className="h-full w-1/4 min-w-[300px]">
+            <SystemSidebar />
+          </div>
+        </main>
+      </TelemetryProvider>
+    </RequireAuth>
   );
 }
