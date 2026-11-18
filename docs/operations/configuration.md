@@ -37,6 +37,17 @@ o [`.env.example`](../../.env.example) lista tudo sem valores.
 
 Gere tokens com `openssl rand -hex 32`. Permissões de cada papel: [docs/api](../api/README.md#servidor-mcp).
 
+## Banco de dados e SLA
+
+| Variável | Padrão | Descrição |
+|---|---|---|
+| `DATABASE_URL` | SQLite em `backend/data/sentinel.db` | Produção: `postgresql+asyncpg://usuario:senha@host:5432/sentinel` |
+| `AUTO_MIGRATE` | `true` | Aplica as migrações ao subir. Desligue se o time de banco aplica com `alembic upgrade head` |
+| `SLA_ACK_MINUTES` | `5,15,60,1440` | Minutos para reconhecer SEV1, SEV2, SEV3 e SEV4 |
+| `SLA_RESOLVE_MINUTES` | `60,240,1440,4320` | Minutos para resolver SEV1, SEV2, SEV3 e SEV4 |
+| `SENTINEL_CLUSTER_ID` | `local` | Identificador deste cluster no Sentinel |
+| `SENTINEL_CLUSTER_NAME` | contexto do kubeconfig | Nome exibido |
+
 ## Memória e integrações
 
 | Variável | Padrão | Descrição |

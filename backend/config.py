@@ -76,6 +76,17 @@ class Settings:
         default_factory=lambda: float(os.getenv("HERMES_AGENT_TIMEOUT_SECONDS", "240") or 240)
     )
 
+    # Banco: PostgreSQL em produção (postgresql+asyncpg://…); SQLite local quando vazio
+    database_url: str = field(
+        default_factory=lambda: os.getenv("DATABASE_URL", "").strip() or "sqlite+aiosqlite:///./data/sentinel.db"
+    )
+    auto_migrate: bool = field(default_factory=lambda: os.getenv("AUTO_MIGRATE", "true").lower() != "false")
+    # SLA em minutos para SEV1..SEV4 (reconhecer e resolver)
+    sla_ack_minutes: str = field(default_factory=lambda: os.getenv("SLA_ACK_MINUTES", "5,15,60,1440"))
+    sla_resolve_minutes: str = field(default_factory=lambda: os.getenv("SLA_RESOLVE_MINUTES", "60,240,1440,4320"))
+    # Identidade deste cluster no Sentinel (multicluster: um id por cluster)
+    cluster_id: str = field(default_factory=lambda: os.getenv("SENTINEL_CLUSTER_ID", "local").strip() or "local")
+    cluster_name: str = field(default_factory=lambda: os.getenv("SENTINEL_CLUSTER_NAME", "").strip())
     obsidian_vault_path: Path = field(
         default_factory=lambda: _path(os.getenv("OBSIDIAN_VAULT_PATH", "./obsidian-vault"))
     )
