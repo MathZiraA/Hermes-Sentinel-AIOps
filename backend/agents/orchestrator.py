@@ -15,7 +15,7 @@ from db import operations as ops
 from db import repository as repo
 from domain import actions as catalog
 from domain.lifecycle import OPEN, check_transition, severity_for
-from integrations import brain, notify, obsidian
+from integrations import brain, notify, observability, obsidian
 from integrations.github_itsm import create_issue, github_configured
 from integrations.hermes_client import hermes, tail_lines
 from k8s.client import K8sUnavailable, k8s
@@ -128,7 +128,8 @@ class Orchestrator:
     async def _register(self, inc: Incident) -> None:
         """Primeira gravação: cluster, severidade e cache em memória."""
         inc.cluster = inc.cluster if inc.cluster != "local" else settings.cluster_id
-        inc.sev = severity_for(inc.type, inc.severity)
+        if inc.source != "zabbix":  # alertas externos trazem a severidade da origem
+            inc.sev = severity_for(inc.type, inc.severity)
         self.incidents[inc.id] = inc
         await self._save(inc)
 
@@ -197,6 +198,18 @@ class Orchestrator:
                     rollout = None
                 if rollout and (rollout.get("ageMinutes") or 1e9) > settings.deploy_correlation_minutes:
                     rollout = None
+            if rollout:
+                try:
+                    rollout["commits"] = await asyncio.to_thread(
+                        observability.deploy_commits, deployment, rollout.get("createdAt")
+                    )
+                except Exception as exc:
+                    log.debug("commits do deploy indisponíveis: %s", type(exc).__name__)
+            if observability.loki_configured() and deployment:
+                try:  # o Loki guarda o que o pod já perdeu (pod recriado, container reiniciado)
+                    logs = await observability.loki_logs(det.namespace, deployment, minutes=30, limit=200)
+                except Exception as exc:
+                    log.debug("Loki indisponível: %s", type(exc).__name__)
             inc = Incident(
                 id=_new_id(),
                 rollout=rollout,
@@ -541,6 +554,7 @@ class Orchestrator:
         await self._set_status(inc, "closed", actor)
         self._spawn(self._learn(inc, "rejected", reason))
         await bus.publish({"type": "approval_resolved", "incidentId": inc.id, "decision": "rejected"})
+        await notify.notify("closed", inc, f"Correção rejeitada por {actor}: {reason.strip() or '-'}")
         await executor.go_home("idle", "Entendido, nada foi alterado no cluster.")
         self._spawn(self._close(inc))
         return inc
@@ -697,6 +711,41 @@ class Orchestrator:
         await asyncio.sleep(STEP)
         await itsm.go_home()
         await supervisor.go_home()
+
+    # ------------------------------------------------------------------ entrada: alertas externos (Zabbix)
+    async def ingest_zabbix(self, ev: dict, sev: str) -> Incident | None:
+        """PROBLEM abre (ou reaproveita) um incidente; RESOLVED registra a recuperação no incidente aberto."""
+        existing = next(
+            (i for i in self.incidents.values() if (i.external or {}).get("event_id") == ev["event_id"]), None
+        )
+        if ev["status"].upper() == "RESOLVED":
+            if existing:
+                await self._mark(existing, f"Zabbix: alerta resolvido ({ev['trigger']})", actor="zabbix")
+                existing.related.append(f"Zabbix marcou o alerta como resolvido: {ev['trigger']}")
+                await self._save(existing)
+            return existing
+        if existing:
+            return existing
+        workload = ev.get("workload") or ev["host"]
+        namespace = ev.get("namespace") or ""
+        silence = await ops.active_silence(settings.cluster_id, namespace, workload, "ZabbixAlert")
+        if silence:
+            return None
+        inc = Incident(
+            id=_new_id(),
+            type="ZabbixAlert",
+            namespace=namespace,
+            pod=workload,
+            deployment=ev.get("workload") or None,
+            resourceKind="Deployment" if ev.get("workload") else "Host",
+            reason=f"{ev['trigger']} ({ev['host']})"[:300],
+            events=f"Zabbix · host {ev['host']} · severidade {ev['severity']}\n{ev.get('message') or ''}",
+            source="zabbix",
+            external={k: ev.get(k) for k in ("event_id", "host", "trigger", "severity", "event_url")},
+        )
+        inc.sev = sev  # type: ignore[assignment]
+        self._spawn(self.run_incident(inc, use_ai=True))
+        return inc
 
     # ------------------------------------------------------------------ plantão e escalonamento
     async def escalate(self, inc: Incident, level: int) -> None:

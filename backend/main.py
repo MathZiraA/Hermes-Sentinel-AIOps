@@ -21,6 +21,7 @@ from api import admin as admin_api
 from api import auth as auth_api
 from api import governance as governance_api
 from api import incidents as incidents_api
+from api import integrations as integrations_api
 from api import operations as operations_api
 from api import workspace as workspace_api
 from api.deps import Actor, actor_for, require, websocket_principal
@@ -30,7 +31,7 @@ from db import engine as db_engine
 from db import repository as repo
 from domain.permissions import Principal
 from identity import service as identity
-from integrations import obsidian
+from integrations import observability, obsidian
 from integrations.github_itsm import github_configured
 from integrations.hermes_client import hermes
 from k8s.client import k8s
@@ -74,6 +75,7 @@ async def collect_health() -> dict:
             "detail": f"127.0.0.1:{settings.mcp_port}/mcp" if settings.mcp_token else "SENTINEL_MCP_TOKEN não definido",
         },
         "websocketClients": bus.client_count,
+        "integrations": observability.status(),
     }
 
 
@@ -94,6 +96,9 @@ async def lifespan(_: FastAPI):
     await repo.ensure_cluster(
         settings.cluster_id, settings.cluster_name or kube.get("context") or settings.cluster_id, kube.get("context")
     )
+    from integrations import jira
+
+    jira.register()
     await identity.bootstrap_admin()
     if settings.auth_enabled and await identity.count_users() == 0:
         log.warning("nenhum usuário: abra a interface para criar o administrador (primeira configuração)")
@@ -129,6 +134,7 @@ app.include_router(incidents_api.router)
 app.include_router(governance_api.router)
 app.include_router(workspace_api.router)
 app.include_router(operations_api.router)
+app.include_router(integrations_api.router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=list(settings.cors_origins),

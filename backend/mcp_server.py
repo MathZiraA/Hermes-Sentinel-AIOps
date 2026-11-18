@@ -26,7 +26,7 @@ from mcp.server.transport_security import TransportSecuritySettings
 
 from config import settings
 from domain import actions as catalog
-from integrations import brain, obsidian
+from integrations import brain, observability, obsidian
 from integrations.hermes_client import redact, tail_lines
 from k8s.client import k8s
 
@@ -47,6 +47,7 @@ INVESTIGATE = READ_BASIC | {
     "descrever_recurso",
     "descrever_no",
     "uso_recursos",
+    "buscar_logs_loki",
 }
 RESOURCE_KINDS = ("deployment", "statefulset", "daemonset", "job", "cronjob", "pvc", "service", "hpa", "configmap")
 ALL_TOOLS = INVESTIGATE | {"propor_correcao", "runbook_rascunho"}
@@ -279,6 +280,25 @@ async def descrever_no(ctx: Context, nome: str = "", incident_id: str = "") -> s
     await _ui(incident_id, f"{_who(role)} checando a saúde do nó…", f"descrever_no {','.join(names)}", role)
     parts = [await asyncio.to_thread(k8s.describe_node, n) for n in names[:5]]
     return _untrusted("NÓ", "\n\n".join(parts))
+
+
+@mcp.tool(title="Buscar logs no Loki")
+async def buscar_logs_loki(
+    ctx: Context, namespace: str, workload: str, minutos: int = 30, contendo: str = "", incident_id: str = ""
+) -> str:
+    """Logs centralizados do workload (sobrevivem a pods recriados). `contendo` filtra por texto (ex.: "ERROR")."""
+    role = _authorize(ctx, "buscar_logs_loki")
+    ns, name = _check_ns(namespace), _check_name(workload, "workload")
+    if not observability.loki_configured():
+        raise ToolError("Loki não configurado nesta instalação; use ler_logs")
+    await _ui(incident_id, f"{_who(role)} buscando logs no Loki de {name}…", f"buscar_logs_loki {ns}/{name}", role)
+    try:
+        text = await observability.loki_logs(
+            ns, name, int(minutos or 30), str(contendo)[:100], settings.k8s_log_tail_lines
+        )
+    except Exception as exc:
+        raise ToolError(f"Loki indisponível: {type(exc).__name__}") from exc
+    return _untrusted("LOGS LOKI", text)
 
 
 @mcp.tool(title="Uso de CPU e memória")
