@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from datetime import UTC, datetime
 from typing import Any
 
@@ -37,6 +38,16 @@ class K8sService:
         if client is None:
             raise K8sUnavailable("pacote 'kubernetes' não instalado")
         path = settings.kubeconfig_path
+        if not path.is_file() and os.getenv("KUBERNETES_SERVICE_HOST"):
+            # Rodando dentro do cluster (Helm): usa a ServiceAccount do pod
+            try:
+                cfg = client.Configuration()
+                k8s_config.load_incluster_config(client_configuration=cfg)
+                self._api_client = client.ApiClient(cfg)
+                self.context = "in-cluster"
+                return self._api_client
+            except Exception as exc:
+                raise K8sUnavailable(f"configuração in-cluster inválida: {exc}") from exc
         if not path.is_file():
             raise K8sUnavailable(f"kubeconfig não encontrado em {path}")
         try:

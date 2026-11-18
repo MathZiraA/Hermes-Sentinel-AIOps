@@ -6,7 +6,7 @@
 
 [![CI](https://github.com/MathZiraA/Hermes-Sentinel-AIOps/actions/workflows/ci.yml/badge.svg)](https://github.com/MathZiraA/Hermes-Sentinel-AIOps/actions/workflows/ci.yml)
 [![Licença: MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-blue.svg)](LICENSE)
-![Versão](https://img.shields.io/badge/vers%C3%A3o-0.1.0-informational)
+![Versão](https://img.shields.io/badge/vers%C3%A3o-1.0.0-informational)
 ![Python](https://img.shields.io/badge/python-3.12%2B-3776AB?logo=python&logoColor=white)
 ![Kubernetes](https://img.shields.io/badge/kubernetes-1.30%2B-326CE5?logo=kubernetes&logoColor=white)
 
@@ -62,7 +62,13 @@ flowchart LR
 
 Detalhes em [docs/architecture/overview.md](docs/architecture/overview.md).
 
-## Início rápido
+## Instalação
+
+| Onde | Como | Guia |
+|---|---|---|
+| Kubernetes (produção) | Helm chart: central + agente por cluster | [deploy-helm.md](docs/operations/deploy-helm.md) |
+| Uma VM | Docker Compose (PostgreSQL, backend, interface e proxy) | [deploy-compose.md](docs/operations/deploy-compose.md) |
+| Desenvolvimento | `make setup && make dev` | [installation.md](docs/operations/installation.md) |
 
 ```bash
 git clone https://github.com/MathZiraA/Hermes-Sentinel-AIOps.git
@@ -92,18 +98,25 @@ Abra http://localhost:3000, crie o administrador na primeira tela e, na **Sala d
 | Identidade | Sessões HttpOnly, argon2id, TOTP, OIDC |
 | IA | Hermes Agent (gateway OpenAI-compatível) + Gemini |
 | Memória | Obsidian (Markdown + wikilinks) |
-| Qualidade | pytest, Vitest, ruff, ESLint, Prettier, pip-audit, gitleaks, GitHub Actions |
+| Distribuição | Docker (imagens sem root), Docker Compose + Caddy, Helm chart, métricas Prometheus |
+| Qualidade | pytest, Vitest, ruff, ESLint, Prettier, pip-audit, gitleaks, kubeconform, GitHub Actions |
 
 ## Estrutura do repositório
 
 ```
 ├── backend/               API FastAPI, Monitor, orquestrador, servidor MCP, Hermes Brain
+│   ├── agent/             agente de cluster remoto (python -m agent)
+│   ├── api/               rotas REST por área
+│   ├── db/ · migrations/  modelos, repositórios e migrações Alembic
+│   ├── domain/            regras puras: ciclo de vida, SLA, ações, permissões
+│   ├── identity/          login, sessões, 2FA, OIDC
 │   ├── agents/            orquestração dos cinco agentes
 │   ├── integrations/      Hermes, Hermes Brain, Obsidian, GitHub
 │   ├── k8s/               cliente e Monitor (watch + varredura)
 │   ├── schemas/           contratos de eventos e incidentes
 │   └── tests/
 ├── src/                   frontend (React + TanStack Start, criado no Lovable)
+├── deploy/                Docker Compose (+ Caddy) e Helm chart
 ├── docs/                  arquitetura, ADRs, operação, segurança, manual, API
 ├── obsidian-vault/        Hermes Brain (só os runbooks oficiais são versionados)
 ├── scripts/               instalação e desenvolvimento
@@ -112,8 +125,10 @@ Abra http://localhost:3000, crie o administrador na primeira tela e, na **Sala d
 
 ## Status
 
-Versão **0.1.0**: funcional na topologia de demonstração. O caminho até um produto self-hosted completo (login e
-papéis, PostgreSQL, multicluster, Jira, Zabbix, Helm) está no [ROADMAP](ROADMAP.md).
+Versão **1.0.0**: produto self-hosted completo: login com 2FA e SSO, papéis com escopo por time, PostgreSQL,
+SEV/SLA, auditoria imutável, plantão, autorremediação controlada, Jira, Zabbix, Grafana, Loki, provedor de IA
+trocável com orçamento, multicluster por agente, Helm e Docker Compose. O que veio em cada fase está no
+[ROADMAP](ROADMAP.md) e no [CHANGELOG](CHANGELOG.md).
 
 ## Contribuindo e segurança
 

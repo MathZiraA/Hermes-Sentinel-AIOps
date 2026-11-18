@@ -30,6 +30,8 @@ class Cluster(Base):
     description: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    agent_token_hash: Mapped[str | None] = mapped_column(String(64))  # sha256 do token do agente (Fase 7)
+    agent_version: Mapped[str | None] = mapped_column(String(40))
 
 
 class IncidentRow(Base):
@@ -214,3 +216,24 @@ class BrainNote(Base):
     mtime: Mapped[float] = mapped_column()
     embedding: Mapped[list[Any] | None] = mapped_column(JSON)
     indexed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+# --------------------------------------------------------------------------- multicluster (Fase 7)
+class AgentCommand(Base):
+    """Correção aprovada esperando o agente do cluster remoto buscar, executar e responder."""
+
+    __tablename__ = "agent_commands"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    cluster_id: Mapped[str] = mapped_column(ForeignKey("clusters.id", ondelete="CASCADE"), index=True)
+    incident_id: Mapped[str] = mapped_column(String(40), index=True)
+    action: Mapped[str] = mapped_column(String(40))
+    params: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    namespace: Mapped[str] = mapped_column(String(63), default="")
+    workload: Mapped[str] = mapped_column(String(253))
+    pod: Mapped[str] = mapped_column(String(253), default="")
+    resource_kind: Mapped[str] = mapped_column(String(63), default="Pod")
+    status: Mapped[str] = mapped_column(String(16), default="pending", index=True)  # pending|sent|done|error
+    result: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)

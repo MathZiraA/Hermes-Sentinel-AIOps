@@ -46,6 +46,8 @@ flowchart LR
 | T9 | Correção em loop agrava o incidente | DoS | Dedupe de 10 min, correlação por workload, parâmetros validados (réplicas 1–5, limites de recurso com teto), verificação pós-correção que reabre só uma vez | — |
 | T16 | Alerta forjado no webhook do Zabbix abre incidentes falsos | Spoofing | Token próprio comparado em tempo constante, deduplicação por `event_id`, auditoria de cada evento; um alerta nunca altera o cluster sozinho | Assinatura HMAC do corpo |
 | T17 | Credenciais de integração vazam | Divulgação | Só em variáveis de ambiente; nunca nos logs, na API ou no frontend | Cofre de segredos (Vault/External Secrets) na Fase 7 |
+| T18 | Token de agente roubado envia sinais falsos ou lê comandos | Spoofing | Token por cluster (só o hash no banco), escopo limitado ao próprio cluster, comandos só existem depois de aprovação humana ou política | Rotação automática e mTLS |
+| T19 | Contêiner comprometido escala privilégios | Elevação | Imagens sem root, `allowPrivilegeEscalation: false`, capabilities removidas, seccomp, RBAC sem leitura de Secrets | `readOnlyRootFilesystem` |
 | T15 | Autorremediação mal configurada altera o cluster sem ninguém ver | Elevação | Só ações de baixo risco, só por política de Admin (tipo + escopo), limite por hora, auditoria `politica:<id>`, nunca para incidente simulado | Aprovação em duas etapas para criar políticas |
 | T10 | Dependência vulnerável | Vários | `pip-audit` e Dependabot no CI | — |
 | T11 | Segredo commitado | Divulgação | `.gitignore` estrito, gitleaks no CI e no pre-commit | — |

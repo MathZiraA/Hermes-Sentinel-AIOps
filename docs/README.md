@@ -6,6 +6,7 @@
 | Instalar e configurar | [Instalação](operations/installation.md) · [Configuração](operations/configuration.md) |
 | Montar a demonstração com o Hermes | [Ambiente de demonstração](operations/demo-environment.md) |
 | Ligar Jira, Zabbix, Grafana, Loki e GitHub | [Integrações](operations/integrations.md) |
+| Instalar em produção | [Helm (Kubernetes + agentes)](operations/deploy-helm.md) · [Docker Compose](operations/deploy-compose.md) |
 | Usar no dia a dia | [Manual do usuário](user-guide/README.md) |
 | Integrar | [API REST, WebSocket e MCP](api/README.md) · [OpenAPI](api/openapi.json) |
 | Avaliar a segurança | [Modelo de ameaças](security/threat-model.md) · [Política de segurança](../SECURITY.md) |
@@ -28,3 +29,4 @@
 | [0011](architecture/adr/0011-operacao.md) | Operação: ações, verificação, silêncios, autorremediação e plantão |
 | [0012](architecture/adr/0012-integracoes.md) | Integrações por canais e enriquecimento opcional |
 | [0013](architecture/adr/0013-plataforma-de-ia.md) | Provedor de IA trocável, orçamento, avaliação humana e memória indexada |
+| [0014](architecture/adr/0014-distribuicao-e-multicluster.md) | Distribuição em contêineres e multicluster por agente de saída |

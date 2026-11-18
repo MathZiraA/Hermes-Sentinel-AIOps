@@ -1,0 +1,19 @@
+# Contexto compartilhado pelas duas imagens (raiz do repositório)
+.git
+node_modules
+.output
+.wrangler
+*.log
+.env
+.env.*
+!.env.example
+backend/.venv
+backend/data
+**/__pycache__
+**/*.pyc
+backend/.pytest_cache
+backend/.ruff_cache
+backend/tests
+docs
+obsidian-vault/*
+!obsidian-vault/06 - Runbooks

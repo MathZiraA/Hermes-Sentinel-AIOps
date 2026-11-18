@@ -12,13 +12,14 @@ from typing import Annotated
 
 from fastapi import Depends, FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from sqlalchemy import text
 
 import mcp_server
 from agents.orchestrator import orchestrator
 from api import admin as admin_api
 from api import auth as auth_api
+from api import cluster_agents as cluster_agents_api
 from api import governance as governance_api
 from api import incidents as incidents_api
 from api import integrations as integrations_api
@@ -26,9 +27,11 @@ from api import operations as operations_api
 from api import workspace as workspace_api
 from api.deps import Actor, actor_for, require, websocket_principal
 from config import settings
+from core import telemetry as observability_metrics
 from core.bus import bus
 from db import engine as db_engine
 from db import repository as repo
+from domain.lifecycle import OPEN
 from domain.permissions import Principal
 from identity import service as identity
 from integrations import brain_index, observability, obsidian
@@ -38,7 +41,7 @@ from k8s.client import k8s
 from k8s.watcher import watcher
 from schemas.events import SimulateRequest, now_iso
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+observability_metrics.setup_logging()
 log = logging.getLogger("sentinel")
 
 HEALTH_INTERVAL = 30  # s — health checks não usam IA (GET /v1/models)
@@ -125,7 +128,7 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title="Hermes Sentinel API",
-    version="0.1.0",
+    version="1.0.0",
     description="AIOps para Kubernetes: detecção determinística, investigação pelo Hermes e remediação com aprovação humana.",
     lifespan=lifespan,
 )
@@ -136,6 +139,7 @@ app.include_router(governance_api.router)
 app.include_router(workspace_api.router)
 app.include_router(operations_api.router)
 app.include_router(integrations_api.router)
+app.include_router(cluster_agents_api.router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=list(settings.cors_origins),
@@ -153,6 +157,23 @@ async def reject_cross_site_writes(request: Request, call_next):  # type: ignore
     if request.method not in ("GET", "HEAD", "OPTIONS") and origin and origin not in settings.cors_origins:
         return JSONResponse({"detail": "origem não permitida"}, status_code=403)
     return await call_next(request)
+
+
+@app.get("/metrics", include_in_schema=False)
+async def metrics() -> Response:
+    """Métricas Prometheus. Exponha só para a rede interna (o Helm chart cria um Service separado)."""
+    observability_metrics.WS_CLIENTS.set(bus.client_count)
+    for sev in ("SEV1", "SEV2", "SEV3", "SEV4"):
+        observability_metrics.OPEN_INCIDENTS.labels(sev).set(
+            sum(1 for i in orchestrator.incidents.values() if i.sev == sev and i.status in OPEN)
+        )
+    return Response(observability_metrics.render(), media_type="text/plain; version=0.0.4")
+
+
+@app.get("/api/readyz", tags=["saúde"], summary="Readiness: banco acessível (público)")
+async def readyz() -> Response:
+    db_ok = (await _db_health())["ok"]
+    return JSONResponse({"ok": db_ok}, status_code=200 if db_ok else 503)
 
 
 @app.get("/api/healthz", tags=["saúde"], summary="Liveness (público, sem detalhes)")

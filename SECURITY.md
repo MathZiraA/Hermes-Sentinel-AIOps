@@ -7,8 +7,8 @@ segurança a sério.
 
 | Versão | Suporte |
 |---|---|
-| `main` / `0.x` mais recente | ✅ correções de segurança |
-| versões `0.x` anteriores | ❌ atualize para a mais recente |
+| `1.x` mais recente | ✅ correções de segurança |
+| `0.x` | ❌ atualize para a 1.x |
 
 ## Como relatar uma vulnerabilidade
 

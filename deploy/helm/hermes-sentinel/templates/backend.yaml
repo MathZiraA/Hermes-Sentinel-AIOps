@@ -1,0 +1,105 @@
+{{- if .Values.central.enabled }}
+{{- if .Values.central.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "sentinel.fullname" . }}-brain
+  labels: {{- include "sentinel.labels" . | nindent 4 }}
+spec:
+  accessModes: [{{ .Values.central.persistence.accessMode }}]
+  {{- with .Values.central.persistence.storageClass }}
+  storageClassName: {{ . }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.central.persistence.size }}
+---
+{{- end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "sentinel.fullname" . }}-backend
+  labels: {{- include "sentinel.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.central.replicaCount }}
+  strategy: {type: Recreate}   # escritor único: nunca duas réplicas ao mesmo tempo
+  selector:
+    matchLabels: {{- include "sentinel.selector" (dict "root" . "component" "backend") | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "sentinel.selector" (dict "root" . "component" "backend") | nindent 8 }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: /metrics
+    spec:
+      serviceAccountName: {{ include "sentinel.serviceAccount" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        fsGroup: 10001
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: backend
+          image: {{ include "sentinel.backendImage" . }}
+          imagePullPolicy: {{ .Values.image.backend.pullPolicy }}
+          securityContext: {{- toYaml .Values.securityContext | nindent 12 }}
+          envFrom:
+            - secretRef:
+                name: {{ include "sentinel.secretName" . }}
+          env:
+            - {name: K8S_NAMESPACES, value: {{ join "," .Values.central.namespaces | quote }}}
+            - {name: SENTINEL_CLUSTER_ID, value: {{ .Values.central.clusterId | quote }}}
+            - {name: SENTINEL_CLUSTER_NAME, value: {{ .Values.central.clusterName | quote }}}
+            - {name: CORS_ORIGINS, value: {{ .Values.central.publicUrl | quote }}}
+            - {name: FRONTEND_URL, value: {{ .Values.central.publicUrl | quote }}}
+            - {name: OIDC_REDIRECT_URI, value: {{ printf "%s/api/auth/oidc/callback" .Values.central.publicUrl | quote }}}
+            - {name: COOKIE_SECURE, value: {{ hasPrefix "https://" .Values.central.publicUrl | quote }}}
+            - {name: KUBECONFIG_PATH, value: /nonexistent}   # força a configuração in-cluster
+            - {name: OBSIDIAN_VAULT_PATH, value: /data/brain}
+            {{- range $k, $v := .Values.central.env }}
+            - {name: {{ $k }}, value: {{ $v | quote }}}
+            {{- end }}
+          ports:
+            - {name: http, containerPort: 8000}
+          readinessProbe:
+            httpGet: {path: /api/readyz, port: http}
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /api/healthz, port: http}
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources: {{- toYaml .Values.central.resources | nindent 12 }}
+          volumeMounts:
+            - {name: brain, mountPath: /data/brain}
+      volumes:
+        - name: brain
+          {{- if .Values.central.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "sentinel.fullname" . }}-brain
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity: {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "sentinel.fullname" . }}-backend
+  labels:
+    {{- include "sentinel.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+spec:
+  selector: {{- include "sentinel.selector" (dict "root" . "component" "backend") | nindent 4 }}
+  ports:
+    - {name: http, port: 8000, targetPort: http}
+{{- end }}
