@@ -2,6 +2,7 @@
 
 import itertools
 from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace as NS
 
 import pytest
 from fastapi import FastAPI
@@ -111,9 +112,10 @@ async def test_resumo_calcula_mtta_e_mttr(database):
 @pytest.fixture()
 async def api(database, tmp_path, monkeypatch):
     from agents import orchestrator as orch_mod
-    from api import governance, incidents
+    from api import deps, governance, incidents
     from integrations import brain
 
+    monkeypatch.setattr(deps, "settings", NS(auth_enabled=False))  # Fase 1 testa o fluxo, não o login
     monkeypatch.setattr(orch_mod, "STEP", 0)
     monkeypatch.setattr(brain, "root", lambda: tmp_path / "brain")
     orch_mod.orchestrator.incidents.clear()
@@ -162,6 +164,7 @@ async def test_api_reconhecer_aprovar_e_auditar(api):
 async def test_api_rejeitar_fecha_sem_alterar_e_separa_deveres(api):
     client, orch = api
     await _waiting(orch, id="INC-2")
+    assert (await client.post("/api/agents/reject/INC-2", json={"motivo": "  "})).status_code == 422
     r = await client.post("/api/agents/reject/INC-2", json={"motivo": "config errada"})
     assert r.json()["status"] == "closed"
     inc3 = await _waiting(orch, id="INC-3")
