@@ -21,6 +21,7 @@ from api import admin as admin_api
 from api import auth as auth_api
 from api import governance as governance_api
 from api import incidents as incidents_api
+from api import operations as operations_api
 from api import workspace as workspace_api
 from api.deps import Actor, actor_for, require, websocket_principal
 from config import settings
@@ -105,6 +106,7 @@ async def lifespan(_: FastAPI):
         asyncio.create_task(health_loop()),
         asyncio.create_task(orchestrator.consume_detections()),
         asyncio.create_task(mcp_server.serve()),
+        asyncio.create_task(orchestrator.escalation_loop()),
     ]
     log.info(
         "Hermes Sentinel no ar · gateway=%s · kubeconfig=%s", settings.hermes_gateway_url, settings.kubeconfig_path
@@ -126,6 +128,7 @@ app.include_router(admin_api.router)
 app.include_router(incidents_api.router)
 app.include_router(governance_api.router)
 app.include_router(workspace_api.router)
+app.include_router(operations_api.router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=list(settings.cors_origins),

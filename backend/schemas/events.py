@@ -52,7 +52,8 @@ class KanbanAction(BaseModel):
 
 class ApprovalRequest(BaseModel):
     incidentId: str
-    action: Literal["rollout_restart", "scale", "delete_pod", "none"]
+    action: str  # ver domain/actions.py
+    params: dict = Field(default_factory=dict)  # validados por domain.actions.validate
     command: str
     description: str
     target: str
@@ -120,6 +121,11 @@ class Incident(BaseModel):
     decisionBy: str | None = None
     decisionReason: str | None = None
     decidedAt: str | None = None
+    assignedTo: list[str] = Field(default_factory=list)  # plantão responsável agora
+    escalationLevel: int = 0  # 0 = ninguém avisado · 1 primário · 2 secundário · 3 administradores
+    reopenCount: int = 0  # a verificação pós-correção reabriu o incidente
+    rollout: dict | None = None  # deploy recente correlacionado ao incidente
+    autoRemediatedBy: str | None = None  # política de autorremediação que aprovou sozinha
     logs: str = ""
     events: str = ""
     rca: dict | None = None

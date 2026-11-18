@@ -27,6 +27,7 @@ from typing import Any
 import httpx
 
 from config import settings
+from domain.actions import ACTION_IDS, catalog_for_prompt
 from schemas.events import Incident, clip_bubble
 
 log = logging.getLogger("sentinel.hermes")
@@ -78,11 +79,15 @@ Responda APENAS com um objeto JSON válido (sem markdown), neste formato:
   "rootCause": "causa raiz em 1-3 frases, em português",
   "evidence": ["linha de log ou evento que prova a causa", "..."],
   "confidence": "alta" | "média" | "baixa",
-  "recommendedAction": {"type": "rollout_restart" | "scale" | "delete_pod" | "none", "replicas": null, "reason": "por que esta ação"},
+  "recommendedAction": {"type": "<uma das ações do catálogo>", "replicas": null, "container": null,
+                        "memory_limit": null, "cpu_limit": null, "reason": "por que esta ação"},
   "stakeholderSummary": "frase simples para pessoas não-técnicas, no máximo 90 caracteres",
   "followUps": ["ação de acompanhamento 1", "..."],
   "learning": "o que o time deve lembrar da próxima vez (1 frase)"
-}"""
+}
+
+Catálogo de ações:
+""" + catalog_for_prompt()
 
 # --------------------------------------------------------------------------- redação de segredos
 _REDACTIONS: list[tuple[re.Pattern[str], str]] = [
@@ -121,10 +126,15 @@ Regras:
 - Não use terminal, navegador nem outras ferramentas. Não tente alterar o cluster.
 - Responda em português, ao final, SOMENTE com um JSON:
 {"rootCause": str, "evidence": [str], "confidence": "alta"|"média"|"baixa",
- "recommendedAction": {"type": "rollout_restart"|"scale"|"delete_pod"|"none", "replicas": int|null, "reason": str},
+ "recommendedAction": {"type": str (catálogo abaixo), "replicas": int|null, "container": str|null,
+                       "memory_limit": str|null (ex. "256Mi"), "cpu_limit": str|null (ex. "500m"), "reason": str},
  "stakeholderSummary": str (até 90 caracteres, linguagem simples), "followUps": [str],
  "learning": str (1 frase: o que o time deve lembrar da próxima vez)}
-Use "none" quando reiniciar não resolve (ex.: imagem inexistente, dependência fora do ar)."""
+Use "none" quando reiniciar não resolve (ex.: imagem inexistente, dependência fora do ar, config faltando).
+Se o incidente começou logo após um rollout, considere rollout_undo. OOM por limite baixo pede set_resources.
+
+Catálogo de ações:
+""" + catalog_for_prompt()
 
 
 def redact(text: str) -> str:
@@ -411,7 +421,7 @@ class HermesClient:
             rca = _extract_json(text)
             rca["stakeholderSummary"] = clip_bubble(str(rca.get("stakeholderSummary", "")))
             action = rca.get("recommendedAction") or {}
-            if action.get("type") not in ("rollout_restart", "scale", "delete_pod", "none"):
+            if action.get("type") not in ACTION_IDS:
                 action["type"] = "none"  # ação desconhecida: nunca chuta uma correção
             rca["recommendedAction"] = action
             rca.setdefault("evidence", [])
@@ -464,7 +474,7 @@ class HermesClient:
             return rca
         rca["stakeholderSummary"] = clip_bubble(str(rca.get("stakeholderSummary", "")))
         action = rca.get("recommendedAction") or {}
-        if action.get("type") not in ("rollout_restart", "scale", "delete_pod", "none"):
+        if action.get("type") not in ACTION_IDS:
             action["type"] = "none"  # ação desconhecida: nunca chuta uma correção
         rca["recommendedAction"] = action
         rca.setdefault("evidence", [])
