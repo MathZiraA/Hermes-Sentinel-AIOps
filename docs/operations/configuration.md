@@ -105,6 +105,15 @@ Guia passo a passo em [integrations.md](integrations.md).
 | `GITHUB_TOKEN` | — | Opcional: o ITSM abre uma issue por incidente |
 | `GITHUB_REPO` | `MathZiraA/Hermes-Sentinel-AIOps` | Repositório das issues |
 
+## Logs e agente
+
+| Variável | Padrão | Descrição |
+|---|---|---|
+| `LOG_FORMAT` | `text` (imagens: `json`) | `json` para uma linha JSON por evento |
+| `LOG_LEVEL` | `INFO` | Nível de log |
+| `SENTINEL_URL` / `SENTINEL_AGENT_TOKEN` | — | Só no agente de cluster remoto: endereço da central e token do cluster |
+| `AGENT_POLL_SECONDS` | `10` | Intervalo do agente para enviar sinais e buscar comandos |
+
 ## Servidor local
 
 | Variável | Padrão | Descrição |

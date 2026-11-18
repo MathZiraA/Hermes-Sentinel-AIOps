@@ -116,7 +116,19 @@ Resumo; detalhes em [threat-model.md](../security/threat-model.md).
 Incidentes, linha do tempo, clusters e auditoria ficam no banco (PostgreSQL em produção, SQLite na demo), com
 migrações Alembic aplicadas na subida. Detalhes e motivos no [ADR 0008](adr/0008-persistencia-ciclo-de-vida-auditoria.md).
 
-## Limitações conhecidas (0.1.x)
+## Implantação
 
-- Sem login nem papéis de usuário na interface (Fase 2).
-- Um cluster por instalação (Fase 7).
+| Modo | Como | Guia |
+|---|---|---|
+| Kubernetes | Helm: central (API, Monitor, interface) + um agente por cluster remoto | [deploy-helm.md](../operations/deploy-helm.md) |
+| VM | Docker Compose: PostgreSQL, backend, interface, Caddy | [deploy-compose.md](../operations/deploy-compose.md) |
+| Demonstração | notebook + túnel SSH reverso + Hermes no VPS | [demo-environment.md](../operations/demo-environment.md) |
+
+## Limitações conhecidas (1.0)
+
+- O backend roda com uma réplica: o Monitor, a fila de escalonamento e a cadeia de auditoria assumem um escritor
+  único ([ADR 0008](adr/0008-persistencia-ciclo-de-vida-auditoria.md)).
+- A investigação agêntica pelo MCP vale para o cluster da central; clusters remotos são diagnosticados com os logs e
+  o describe que o agente envia ([ADR 0014](adr/0014-distribuicao-e-multicluster.md)).
+- Os eventos do WebSocket (animações da sala de guerra) ainda não são filtrados por escopo de time; a API e os dados
+  são ([ADR 0009](adr/0009-identidade-e-acesso.md)).

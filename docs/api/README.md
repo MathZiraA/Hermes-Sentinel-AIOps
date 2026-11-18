@@ -77,6 +77,18 @@ exige uma permissão do papel (tabela abaixo) e filtra pelo escopo dos times do 
 | `GET` · `POST` | `/api/oncall` | leitura · Admin | Turnos de plantão (`{"teamId", "user", "level": 1\|2, "startsAt", "endsAt"}`) |
 | `DELETE` | `/api/oncall/{id}` | Admin | Remove um turno |
 
+### Multicluster
+
+| Método | Rota | Autenticação | Descrição |
+|---|---|---|---|
+| `POST` | `/api/admin/clusters` | Admin | `{"id", "name"}`: cadastra o cluster e devolve o token do agente **uma vez** |
+| `POST` | `/api/agent/v1/heartbeat` | token do agente | Agente vivo (versão) |
+| `POST` | `/api/agent/v1/signals` | token do agente | Lista de sinais com logs, describe e deploy recente |
+| `GET` | `/api/agent/v1/commands` | token do agente | Correções aprovadas (entregues uma única vez) |
+| `POST` | `/api/agent/v1/commands/{id}/result` | token do agente | `{"ok", "result", "error", "healthy", "detail"}` |
+
+Saúde e métricas: `GET /api/healthz` (liveness), `GET /api/readyz` (readiness), `GET /metrics` (Prometheus).
+
 ### Integrações
 
 | Método | Rota | Descrição |

@@ -3,7 +3,7 @@
   "info": {
     "title": "Hermes Sentinel API",
     "description": "AIOps para Kubernetes: detecção determinística, investigação pelo Hermes e remediação com aprovação humana.",
-    "version": "0.1.0"
+    "version": "1.0.0"
   },
   "paths": {
     "/api/auth/config": {
@@ -2128,6 +2128,301 @@
         }
       }
     },
+    "/api/admin/clusters": {
+      "post": {
+        "tags": [
+          "multicluster",
+          "administração"
+        ],
+        "summary": "Cadastrar cluster remoto (devolve o token do agente UMA vez)",
+        "operationId": "register_cluster_api_admin_clusters_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewCluster"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Register Cluster Api Admin Clusters Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/agent/v1/heartbeat": {
+      "post": {
+        "tags": [
+          "multicluster"
+        ],
+        "summary": "Agente: estou vivo",
+        "operationId": "heartbeat_api_agent_v1_heartbeat_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Heartbeat"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Heartbeat Api Agent V1 Heartbeat Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/agent/v1/signals": {
+      "post": {
+        "tags": [
+          "multicluster"
+        ],
+        "summary": "Agente: sinais detectados no cluster",
+        "operationId": "signals_api_agent_v1_signals_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Signal"
+                },
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Signals Api Agent V1 Signals Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/agent/v1/commands": {
+      "get": {
+        "tags": [
+          "multicluster"
+        ],
+        "summary": "Agente: correções aprovadas para executar",
+        "operationId": "commands_api_agent_v1_commands_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  },
+                  "title": "Response Commands Api Agent V1 Commands Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/agent/v1/commands/{command_id}/result": {
+      "post": {
+        "tags": [
+          "multicluster"
+        ],
+        "summary": "Agente: resultado e verificação",
+        "operationId": "command_result_api_agent_v1_commands__command_id__result_post",
+        "parameters": [
+          {
+            "name": "command_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Command Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommandResult"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Command Result Api Agent V1 Commands  Command Id  Result Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/readyz": {
+      "get": {
+        "tags": [
+          "saúde"
+        ],
+        "summary": "Readiness: banco acessível (público)",
+        "operationId": "readyz_api_readyz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/healthz": {
       "get": {
         "tags": [
@@ -2281,6 +2576,42 @@
         ],
         "title": "Code"
       },
+      "CommandResult": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "result": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Result",
+            "default": ""
+          },
+          "error": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Error",
+            "default": ""
+          },
+          "healthy": {
+            "type": "boolean",
+            "title": "Healthy",
+            "default": false
+          },
+          "detail": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Detail",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok"
+        ],
+        "title": "CommandResult"
+      },
       "DecisionRequest": {
         "properties": {
           "motivo": {
@@ -2306,6 +2637,18 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "Heartbeat": {
+        "properties": {
+          "version": {
+            "type": "string",
+            "maxLength": 40,
+            "title": "Version",
+            "default": "?"
+          }
+        },
+        "type": "object",
+        "title": "Heartbeat"
       },
       "LoginRequest": {
         "properties": {
@@ -2338,6 +2681,26 @@
           "password"
         ],
         "title": "LoginRequest"
+      },
+      "NewCluster": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 63,
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "NewCluster"
       },
       "NewUser": {
         "properties": {
@@ -2568,6 +2931,86 @@
           "endsAt"
         ],
         "title": "ShiftIn"
+      },
+      "Signal": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "maxLength": 80,
+            "title": "Type"
+          },
+          "namespace": {
+            "type": "string",
+            "maxLength": 63,
+            "title": "Namespace",
+            "default": ""
+          },
+          "pod": {
+            "type": "string",
+            "maxLength": 253,
+            "title": "Pod"
+          },
+          "container": {
+            "type": "string",
+            "maxLength": 253,
+            "title": "Container",
+            "default": ""
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Reason",
+            "default": ""
+          },
+          "kind": {
+            "type": "string",
+            "maxLength": 63,
+            "title": "Kind",
+            "default": "Pod"
+          },
+          "severity": {
+            "type": "string",
+            "maxLength": 16,
+            "title": "Severity",
+            "default": "alta"
+          },
+          "owner": {
+            "type": "string",
+            "maxLength": 253,
+            "title": "Owner",
+            "default": ""
+          },
+          "logs": {
+            "type": "string",
+            "maxLength": 20000,
+            "title": "Logs",
+            "default": ""
+          },
+          "events": {
+            "type": "string",
+            "maxLength": 20000,
+            "title": "Events",
+            "default": ""
+          },
+          "rollout": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rollout"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "pod"
+        ],
+        "title": "Signal"
       },
       "SilenceIn": {
         "properties": {
