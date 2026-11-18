@@ -91,6 +91,7 @@ export interface IncidentSummary {
   source: string;
   ticket: { system: string; key: string; url: string } | null;
   links: { grafana?: string; logs?: string; ticket?: string; source?: string };
+  rcaRating: { correct: boolean; note: string | null; by: string; at: string } | null;
   postmortemPath: string | null;
   issueUrl: string | null;
   sla: Sla;
@@ -126,6 +127,28 @@ export interface ReportSummary {
   byService: Record<string, number>;
   byType: Record<string, number>;
   decisions: { approved: number; rejected: number };
+  rca: {
+    rated: number;
+    correct: number;
+    accuracy: number | null;
+    bySource: Record<string, number>;
+  };
+}
+
+export interface AiUsage {
+  provider: string;
+  model: string;
+  limits: { callsPerDay: number; tokensPerDay: number };
+  today: { calls: number; tokens: number; blocked: number };
+  days: {
+    day: string;
+    calls: number;
+    blocked: number;
+    tokensIn: number;
+    tokensOut: number;
+    cost: number;
+  }[];
+  totalCost: number;
 }
 
 export interface ClusterInfo {

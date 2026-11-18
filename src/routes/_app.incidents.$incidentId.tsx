@@ -1,11 +1,23 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Check, ExternalLink, Hand, Loader2, ShieldAlert, X } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  ArrowLeft,
+  Check,
+  ExternalLink,
+  Hand,
+  Loader2,
+  ShieldAlert,
+  ThumbsDown,
+  ThumbsUp,
+  X,
+} from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { SevBadge, SlaBadge, StatusBadge } from "@/components/incidents/badges";
 import { Panel, StateMessage } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { api } from "@/lib/api/client";
 import { useIncident, useIncidentActions } from "@/lib/api/hooks";
 import { OPEN_STATUSES, type IncidentDetail } from "@/lib/api/types";
 import { useAuth } from "@/lib/auth/auth";
@@ -121,6 +133,72 @@ function DecisionPanel({ inc }: { inc: IncidentDetail }) {
         </p>
       )}
     </section>
+  );
+}
+
+function RatingPanel({ inc }: { inc: IncidentDetail }) {
+  const { t } = useI18n();
+  const { can } = useAuth();
+  const qc = useQueryClient();
+  const [wrong, setWrong] = useState(false);
+  const [note, setNote] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  if (!inc.rca?.rootCause) return null;
+  if (inc.rcaRating) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        {t("rating.done")}{" "}
+        <b className={inc.rcaRating.correct ? "text-success" : "text-sev2"}>
+          {inc.rcaRating.correct ? t("rating.correct") : t("rating.wrong")}
+        </b>{" "}
+        · {inc.rcaRating.by}
+        {inc.rcaRating.note && <span className="block">“{inc.rcaRating.note}”</span>}
+      </p>
+    );
+  }
+  if (!can("incidents:decide")) return null;
+  const send = async (correct: boolean) => {
+    setError(null);
+    try {
+      await api.post(`/api/incidents/${encodeURIComponent(inc.id)}/rating`, { correct, note });
+      void qc.invalidateQueries({ queryKey: ["incident", inc.id] });
+      void qc.invalidateQueries({ queryKey: ["summary"] });
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+  return (
+    <div className="border-t border-border pt-3">
+      <p className="text-sm font-medium">{t("rating.question")}</p>
+      <div className="mt-2 flex gap-2">
+        <Button size="sm" variant="outline" onClick={() => void send(true)}>
+          <ThumbsUp className="h-4 w-4" /> {t("rating.yes")}
+        </Button>
+        <Button size="sm" variant="outline" aria-pressed={wrong} onClick={() => setWrong(true)}>
+          <ThumbsDown className="h-4 w-4" /> {t("rating.no")}
+        </Button>
+      </div>
+      {wrong && (
+        <div className="mt-2 space-y-2">
+          <Textarea
+            aria-label={t("rating.note")}
+            placeholder={t("rating.note")}
+            rows={2}
+            maxLength={600}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+          />
+          <Button size="sm" onClick={() => void send(false)}>
+            {t("common.save")}
+          </Button>
+        </div>
+      )}
+      {error && (
+        <p role="alert" className="mt-1 text-sm text-destructive">
+          {error}
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -254,6 +332,9 @@ function IncidentPage() {
             ) : (
               <p className="text-sm text-muted-foreground">{t("incident.noRca")}</p>
             )}
+            <div className="mt-4">
+              <RatingPanel inc={inc} />
+            </div>
           </Panel>
 
           <Tabs defaultValue="timeline">

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "./client";
 import type {
   ActionInfo,
+  AiUsage,
   AdminTeam,
   AdminUser,
   AuditEntry,
@@ -136,6 +137,13 @@ export function useIncidentActions(id: string) {
     }),
   };
 }
+
+export const useAiUsage = (days = 30) =>
+  useQuery({
+    queryKey: ["ai-usage", days],
+    queryFn: () => api.get<AiUsage>(`/api/ai/usage?days=${days}`),
+    refetchInterval: 60_000,
+  });
 
 export const useSilences = () =>
   useQuery({ queryKey: ["silences"], queryFn: () => api.get<Silence[]>("/api/silences") });

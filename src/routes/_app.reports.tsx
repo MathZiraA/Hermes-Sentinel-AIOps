@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { PageHeader, Panel, StateMessage } from "@/components/layout/PageHeader";
-import { useSummary } from "@/lib/api/hooks";
+import { useAiUsage, useSummary } from "@/lib/api/hooks";
 import { useI18n } from "@/lib/i18n/i18n";
 import { cn } from "@/lib/utils";
 
@@ -51,6 +51,73 @@ function HBars({
         <Bar dataKey="value" radius={[0, 4, 4, 0]} fill={color} />
       </BarChart>
     </ResponsiveContainer>
+  );
+}
+
+function AiPanel({ days }: { days: number }) {
+  const { t } = useI18n();
+  const { data } = useAiUsage(days);
+  if (!data) return null;
+  const tokens = data.days.reduce((n, d) => n + d.tokensIn + d.tokensOut, 0);
+  return (
+    <Panel
+      title={`${t("reports.ai")} · ${data.provider}${data.model ? ` (${data.model})` : ""}`}
+      className="lg:col-span-2"
+    >
+      <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+        <div>
+          <dt className="text-xs text-muted-foreground">{t("reports.aiToday")}</dt>
+          <dd className="font-semibold tabular-nums">
+            {data.today.calls}
+            {data.limits.callsPerDay ? ` / ${data.limits.callsPerDay}` : ""}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-xs text-muted-foreground">{t("reports.aiBlocked")}</dt>
+          <dd className={cn("font-semibold tabular-nums", data.today.blocked > 0 && "text-sev2")}>
+            {data.today.blocked}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-xs text-muted-foreground">{t("reports.aiTokens")}</dt>
+          <dd className="font-semibold tabular-nums">{tokens.toLocaleString()}</dd>
+        </div>
+        <div>
+          <dt className="text-xs text-muted-foreground">{t("reports.aiCost")}</dt>
+          <dd className="font-semibold tabular-nums">US$ {data.totalCost.toFixed(2)}</dd>
+        </div>
+      </dl>
+      {data.days.length > 0 && (
+        <div className="mt-4">
+          <p className="mb-1 text-xs text-muted-foreground">{t("reports.callsPerDay")}</p>
+          <ResponsiveContainer width="100%" height={140}>
+            <BarChart data={data.days}>
+              <XAxis
+                dataKey="day"
+                tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                allowDecimals={false}
+                width={28}
+                tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
+              />
+              <Tooltip
+                cursor={{ fill: "var(--accent)" }}
+                contentStyle={{
+                  background: "var(--popover)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 8,
+                }}
+              />
+              <Bar dataKey="calls" stackId="a" fill="var(--primary)" />
+              <Bar dataKey="blocked" stackId="a" fill="var(--sev2)" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+    </Panel>
   );
 }
 
@@ -164,6 +231,21 @@ function Reports() {
                 </div>
               )}
             </Panel>
+            <Panel title={t("reports.accuracy")}>
+              {data.rca.rated === 0 ? (
+                <StateMessage>{t("common.empty")}</StateMessage>
+              ) : (
+                <div className="py-4">
+                  <p className="text-3xl font-semibold tabular-nums">
+                    {Math.round((data.rca.accuracy ?? 0) * 100)}%
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {data.rca.correct}/{data.rca.rated} {t("reports.rated")}
+                  </p>
+                </div>
+              )}
+            </Panel>
+            <AiPanel days={days} />
             <Panel title={t("reports.byService")}>
               <HBars data={data.byService} />
             </Panel>
