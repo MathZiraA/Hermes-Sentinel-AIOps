@@ -21,6 +21,7 @@ from api import admin as admin_api
 from api import auth as auth_api
 from api import governance as governance_api
 from api import incidents as incidents_api
+from api import workspace as workspace_api
 from api.deps import Actor, actor_for, require, websocket_principal
 from config import settings
 from core.bus import bus
@@ -124,6 +125,7 @@ app.include_router(auth_api.router)
 app.include_router(admin_api.router)
 app.include_router(incidents_api.router)
 app.include_router(governance_api.router)
+app.include_router(workspace_api.router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=list(settings.cors_origins),

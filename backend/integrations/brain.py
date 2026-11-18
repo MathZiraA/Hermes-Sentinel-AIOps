@@ -558,3 +558,33 @@ def status() -> dict[str, Any]:
         if ok
         else "vault ausente",
     }
+
+
+# --------------------------------------------------------------------------- grafo (tela do Hermes Brain)
+FOLDER_GROUP = {
+    TEAM: "equipe",
+    SERVICES: "servico",
+    PATTERNS: "padrao",
+    INCIDENTS: "incidente",
+    LESSONS: "licao",
+    RUNBOOKS: "runbook",
+    DIARY: "diario",
+    CLUSTER: "cluster",
+}
+_LINK = re.compile(r"\[\[([^\]|#]+)(?:[#|][^\]]*)?\]\]")
+
+
+def graph(limit: int = 600) -> dict[str, Any]:
+    """Nós (notas) e arestas (wikilinks), como a visão de grafo do Obsidian."""
+    notes = [p for p in _notes() if p.name != INDEX][:limit]
+    by_stem = {p.stem: p for p in notes}
+    nodes, links, seen = [], [], set()
+    for p in notes:
+        top = p.relative_to(root()).parts[0] if p.parent != root() else ""
+        nodes.append({"id": p.stem, "group": FOLDER_GROUP.get(top, "outro"), "folder": top})
+        for target in set(_LINK.findall(p.read_text(encoding="utf-8", errors="replace"))):
+            target = target.strip()
+            if target in by_stem and target != p.stem and (p.stem, target) not in seen:
+                seen.add((p.stem, target))
+                links.append({"source": p.stem, "target": target})
+    return {"nodes": nodes, "links": links}
