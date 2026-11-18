@@ -11,13 +11,15 @@ from datetime import datetime
 from agents.base import executor, investigator, itsm, monitor, supervisor
 from config import settings
 from core.bus import bus
+from db import repository as repo
+from domain.lifecycle import OPEN, check_transition, severity_for
 from integrations import brain, obsidian
 from integrations.github_itsm import create_issue, github_configured
 from integrations.hermes_client import hermes, tail_lines
 from k8s.client import K8sUnavailable, k8s
 from k8s.watcher import Detection, watcher
 from mcp_server import tool_calls as mcp_tool_calls
-from schemas.events import ApprovalRequest, Incident, KanbanAction, SimulateRequest
+from schemas.events import ApprovalRequest, Incident, KanbanAction, SimulateRequest, now_iso
 
 log = logging.getLogger("sentinel.orchestrator")
 
@@ -96,8 +98,37 @@ class Orchestrator:
         task.add_done_callback(self._tasks.discard)
         return task
 
-    def _mark(self, inc: Incident, text: str) -> None:
+    async def _mark(self, inc: Incident, text: str, actor: str = "sistema", kind: str = "note") -> None:
+        """Linha do tempo: memória (post-mortem) + banco (persistente)."""
         self.timelines.setdefault(inc.id, []).append(f"{datetime.now().strftime('%H:%M:%S')}: {text}")
+        try:
+            await repo.add_event(inc.id, text, actor=actor, kind=kind)
+        except Exception as exc:  # o fluxo nunca para por causa do banco
+            log.warning("linha do tempo não gravada (%s): %s", inc.id, type(exc).__name__)
+
+    async def _save(self, inc: Incident) -> None:
+        try:
+            await repo.save_incident(inc)
+        except Exception as exc:
+            log.warning("incidente %s não gravado: %s", inc.id, type(exc).__name__)
+
+    async def _set_status(self, inc: Incident, new: str, actor: str = "sistema") -> None:
+        """Muda o status respeitando o ciclo de vida (domain.lifecycle) e persiste."""
+        old = inc.status
+        check_transition(old, new)
+        inc.status = new  # type: ignore[assignment]
+        if new in ("resolved", "closed", "failed") and not inc.resolvedAt:
+            inc.resolvedAt = now_iso()
+        if old != new:
+            await self._mark(inc, f"status: {old} → {new}", actor=actor, kind="status")
+        await self._save(inc)
+
+    async def _register(self, inc: Incident) -> None:
+        """Primeira gravação: cluster, severidade e cache em memória."""
+        inc.cluster = inc.cluster if inc.cluster != "local" else settings.cluster_id
+        inc.sev = severity_for(inc.type, inc.severity)
+        self.incidents[inc.id] = inc
+        await self._save(inc)
 
     @property
     def pending_approvals(self) -> list[dict]:
@@ -109,11 +140,7 @@ class Orchestrator:
     def _open_for(self, namespace: str, target: str) -> Incident | None:
         """Incidente ainda aberto para o mesmo workload: sinais novos se juntam a ele (1 incidente, não 5)."""
         for inc in reversed(list(self.incidents.values())):
-            if (
-                inc.namespace == namespace
-                and (inc.deployment or inc.pod) == target
-                and inc.status in ("open", "investigating", "waiting_approval", "remediating")
-            ):
+            if inc.namespace == namespace and (inc.deployment or inc.pod) == target and inc.status in OPEN:
                 return inc
         return None
 
@@ -151,7 +178,7 @@ class Orchestrator:
                 signal = f"{det.type} em {det.kind}/{det.pod}: {det.reason}"
                 if signal not in existing.related:
                     existing.related.append(signal)
-                    self._mark(existing, f"Sinal correlacionado: {signal}")
+                    await self._mark(existing, f"Sinal correlacionado: {signal}")
                     await monitor.emit(
                         "monitoring", f"Mais um sinal em {target}: {det.type}.", incident_id=existing.id, log=signal
                     )
@@ -192,13 +219,13 @@ class Orchestrator:
 
     # ------------------------------------------------------------------ fluxo principal
     async def run_incident(self, inc: Incident, use_ai: bool) -> None:
-        self.incidents[inc.id] = inc
+        await self._register(inc)
         tag = " (simulado)" if inc.simulated else ""
         target = inc.deployment or inc.pod
         card = lambda **kw: KanbanAction(cardId=inc.id, **kw)  # noqa: E731
 
         # 1. Monitor detecta (determinístico)
-        self._mark(inc, f"Monitor detectou {inc.type} em {inc.namespace}/{inc.pod}{tag}")
+        await self._mark(inc, f"Monitor detectou {inc.type} em {inc.namespace}/{inc.pod}{tag}")
         await monitor.emit(
             "alert",
             f"Alerta! {inc.type} em {target}{tag}",
@@ -224,12 +251,12 @@ class Orchestrator:
                 op="create", title=f"{inc.type}: {inc.namespace}/{target}", column="Backlog", agentId="itsm", progress=5
             ),
         )
-        self._mark(inc, "Supervisor abriu o incidente; ITSM criou o card no Kanban")
+        await self._mark(inc, "Supervisor abriu o incidente; ITSM criou o card no Kanban")
         await asyncio.sleep(STEP)
         await monitor.emit("monitoring", "De olho no restante do cluster.", incident_id=inc.id)
 
         # 3. Investigator: logs + describe + runbooks → Hermes (1 chamada) ou fallback
-        inc.status = "investigating"
+        await self._set_status(inc, "investigating")
         await supervisor.walk("CENTRAL_HUB", "Investigator, preciso da causa raiz.", incident_id=inc.id)
         await investigator.emit(
             "investigating",
@@ -242,7 +269,7 @@ class Orchestrator:
         runbooks = await asyncio.to_thread(obsidian.find_runbooks, inc.type)
         inc.memory = await asyncio.to_thread(brain.related, inc.type, target, inc.resourceKind)
         if inc.memory:
-            self._mark(inc, "Investigator consultou o Hermes Brain (casos e lições anteriores)")
+            await self._mark(inc, "Investigator consultou o Hermes Brain (casos e lições anteriores)")
             await investigator.emit(
                 "investigating", "Lembrando casos parecidos no Hermes Brain…", incident_id=inc.id, log=inc.memory[:600]
             )
@@ -258,7 +285,7 @@ class Orchestrator:
             rca = await hermes.investigate(inc, runbooks)
             calls = len(mcp_tool_calls.pop(inc.id, []))
             if rca.get("source") == "hermes-agent+mcp":
-                self._mark(inc, f"Hermes investigou pelo MCP ({calls} chamada(s) de ferramenta)")
+                await self._mark(inc, f"Hermes investigou pelo MCP ({calls} chamada(s) de ferramenta)")
         elif use_ai:
             rca = await hermes.diagnose(inc, runbooks)
         else:
@@ -274,7 +301,7 @@ class Orchestrator:
                 log=rca.get("fallbackReason", ""),
             )
             await asyncio.sleep(STEP / 2)
-        self._mark(inc, f"RCA ({rca.get('source')}): {rca.get('rootCause')}")
+        await self._mark(inc, f"RCA ({rca.get('source')}): {rca.get('rootCause')}")
         await investigator.emit(
             "talking",
             f"Causa: {rca.get('rootCause', '')}",
@@ -315,7 +342,7 @@ class Orchestrator:
             risk="baixo" if action in ("rollout_restart", "delete_pod") else "médio",
             simulated=inc.simulated,
         )
-        inc.status = "waiting_approval"
+        await self._set_status(inc, "waiting_approval")
         await executor.emit(
             "waiting_approval",
             "Correção pronta. Aguardando sua aprovação.",
@@ -325,7 +352,7 @@ class Orchestrator:
             kanban=card(op="move", column="Aguardando aprovação", agentId="executor", progress=65),
         )
         await supervisor.go_home("idle", "Aguardando aprovação humana para corrigir.")
-        self._mark(inc, f"Executor aguardando aprovação: {cmd}")
+        await self._mark(inc, f"Executor aguardando aprovação: {cmd}")
 
     # ------------------------------------------------------------------ entrada: proposta do Hermes (chat/MCP)
     async def propose_from_hermes(
@@ -364,8 +391,10 @@ class Orchestrator:
             "runbooks": [],
         }
         inc.rca = rca
-        self.incidents[inc.id] = inc
-        self._mark(inc, f"Hermes propôs pelo chat: {action} em {namespace}/{deployment} — {root_cause}")
+        inc.proposedBy = "hermes"
+        await self._register(inc)
+        await self._set_status(inc, "investigating")
+        await self._mark(inc, f"Hermes propôs pelo chat: {action} em {namespace}/{deployment} — {root_cause}")
         self._spawn(self._hermes_proposal_scene(inc, rca))
         return inc
 
@@ -398,7 +427,7 @@ class Orchestrator:
         try:
             path = await asyncio.to_thread(brain.write_lesson, inc, decision, reason)
             if path:
-                self._mark(inc, f"Lição registrada no Hermes Brain: {path.stem}")
+                await self._mark(inc, f"Lição registrada no Hermes Brain: {path.stem}")
                 await itsm.emit(
                     "writing",
                     "Anotei a sua decisão como lição para o time.",
@@ -408,25 +437,53 @@ class Orchestrator:
         except Exception as exc:
             log.warning("falha gravando lição: %s", exc)
 
-    async def approve(self, incident_id: str, reason: str = "") -> Incident:
+    def _decide(self, inc: Incident, decision: str, actor: str, reason: str) -> None:
+        if actor != "sistema" and inc.proposedBy == actor:
+            raise PermissionError("quem propôs a correção não pode decidir sobre ela (separação de deveres)")
+        inc.decision = decision  # type: ignore[assignment]
+        inc.decisionBy, inc.decisionReason, inc.decidedAt = actor, (reason.strip() or None), now_iso()
+
+    async def acknowledge(self, incident_id: str, actor: str) -> Incident:
+        """Alguém assumiu o incidente (conta para o MTTA e para o SLA de reconhecimento)."""
+        inc = self.incidents.get(incident_id)
+        if not inc or inc.status not in OPEN:
+            raise KeyError(incident_id)
+        if not inc.acknowledgedAt:
+            inc.acknowledgedAt, inc.acknowledgedBy = now_iso(), actor
+            await self._mark(inc, f"{actor} reconheceu o incidente", actor=actor, kind="ack")
+        if inc.status == "detected":
+            await self._set_status(inc, "acknowledged", actor)
+        else:
+            await self._save(inc)
+        return inc
+
+    async def approve(self, incident_id: str, reason: str = "", actor: str = "operador") -> Incident:
         inc = self.incidents.get(incident_id)
         if not inc or inc.status != "waiting_approval" or not inc.approval:
             raise KeyError(incident_id)
-        inc.status = "remediating"
+        self._decide(inc, "approved", actor, reason)
+        await self._mark(inc, f"{actor} aprovou: {inc.approval.command}", actor=actor, kind="decision")
+        await self._set_status(inc, "remediating", actor)
         self._spawn(self._learn(inc, "approved", reason))
         await bus.publish({"type": "approval_resolved", "incidentId": inc.id, "decision": "approved"})
         self._spawn(self._execute(inc))
         return inc
 
-    async def reject(self, incident_id: str, reason: str = "") -> Incident:
+    async def reject(self, incident_id: str, reason: str = "", actor: str = "operador") -> Incident:
         inc = self.incidents.get(incident_id)
         if not inc or inc.status != "waiting_approval":
             raise KeyError(incident_id)
-        inc.status = "rejected"
+        self._decide(inc, "rejected", actor, reason)
+        inc.remediationResult = f"rejeitada por {actor}"
+        await self._mark(
+            inc,
+            f"{actor} rejeitou a remediação" + (f": {reason.strip()}" if reason.strip() else ""),
+            actor=actor,
+            kind="decision",
+        )
+        await self._set_status(inc, "closed", actor)
         self._spawn(self._learn(inc, "rejected", reason))
-        inc.remediationResult = "rejeitada pelo operador"
         await bus.publish({"type": "approval_resolved", "incidentId": inc.id, "decision": "rejected"})
-        self._mark(inc, "Operador rejeitou a remediação")
         await executor.go_home("idle", "Entendido, nada foi alterado no cluster.")
         self._spawn(self._close(inc))
         return inc
@@ -458,13 +515,13 @@ class Orchestrator:
                 else:
                     result = await asyncio.to_thread(k8s.delete_pod, ns, inc.pod)
             inc.remediationResult = result
-            inc.status = "resolved"
-            self._mark(inc, f"Executor: {result}")
+            await self._set_status(inc, "resolved")
+            await self._mark(inc, f"Executor: {result}")
             await executor.emit("done", "Correção aplicada com sucesso.", incident_id=inc.id, log=result)
         except (K8sUnavailable, Exception) as exc:
             inc.remediationResult = f"falhou: {exc}"
-            inc.status = "failed"
-            self._mark(inc, f"Executor falhou: {exc}")
+            await self._set_status(inc, "failed")
+            await self._mark(inc, f"Executor falhou: {exc}")
             await executor.emit(
                 "error", "Não consegui aplicar. Precisa de um humano.", incident_id=inc.id, log=str(exc)[:500]
             )
@@ -481,6 +538,8 @@ class Orchestrator:
             path = await asyncio.to_thread(obsidian.write_postmortem, inc, self.timelines.get(inc.id, []))
             inc.postmortemPath = str(path)
             note = f"Hermes Brain: {path.stem} (+ serviço e padrão atualizados)"
+            if inc.status == "resolved":
+                await self._set_status(inc, "postmortem")
         except Exception as exc:
             note = f"post-mortem falhou: {exc}"
         if github_configured():
@@ -490,9 +549,11 @@ class Orchestrator:
             except Exception as exc:
                 note += f" | GitHub falhou: {type(exc).__name__}"
         await asyncio.sleep(STEP / 2)
+        await self._save(inc)
         final = {
             "resolved": "Incidente resolvido e documentado.",
-            "rejected": "Incidente encerrado sem alteração.",
+            "postmortem": "Incidente resolvido e documentado.",
+            "closed": "Incidente encerrado sem alteração.",
             "failed": "Falha registrada; aguardando ação humana.",
         }.get(inc.status, "Incidente documentado.")
         await itsm.emit(
@@ -509,6 +570,27 @@ class Orchestrator:
         await asyncio.sleep(STEP)
         await itsm.go_home()
         await supervisor.go_home()
+
+    # ------------------------------------------------------------------ subida: retomar o que ficou aberto
+    async def recover(self) -> int:
+        """Carrega do banco os incidentes abertos. Pedidos de aprovação sobrevivem a reinícios;
+        investigações interrompidas recomeçam; correções interrompidas viram falha para um humano conferir."""
+        try:
+            items = await repo.open_incidents()
+        except Exception as exc:
+            log.warning("não consegui carregar incidentes abertos: %s", type(exc).__name__)
+            return 0
+        for inc in items:
+            self.incidents[inc.id] = inc
+            if inc.status in ("detected", "acknowledged", "investigating"):
+                await self._mark(inc, "backend reiniciado: retomando a investigação")
+                self._spawn(self.run_incident(inc, use_ai=not inc.simulated))
+            elif inc.status in ("remediating", "monitoring"):
+                await self._mark(inc, "backend reiniciado durante a correção: confira o estado manualmente")
+                await self._set_status(inc, "failed")
+        if items:
+            log.info("%d incidente(s) aberto(s) retomado(s) do banco", len(items))
+        return len(items)
 
     # ------------------------------------------------------------------ teste de comunicação (0 IA)
     async def test_communication(self) -> None:

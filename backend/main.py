@@ -8,25 +8,42 @@ from __future__ import annotations
 import asyncio
 import logging
 from contextlib import asynccontextmanager, suppress
+from typing import Annotated
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 
 import mcp_server
 from agents.orchestrator import orchestrator
+from api import governance as governance_api
+from api import incidents as incidents_api
+from api.deps import Actor, current_actor
 from config import settings
 from core.bus import bus
+from db import engine as db_engine
+from db import repository as repo
 from integrations import obsidian
 from integrations.github_itsm import github_configured
 from integrations.hermes_client import hermes
 from k8s.client import k8s
 from k8s.watcher import watcher
-from schemas.events import DecisionRequest, SimulateRequest, now_iso
+from schemas.events import SimulateRequest, now_iso
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("sentinel")
 
 HEALTH_INTERVAL = 30  # s — health checks não usam IA (GET /v1/models)
+
+
+async def _db_health() -> dict:
+    try:
+        async with db_engine.session() as s:
+            await s.execute(text("SELECT 1"))
+        kind = settings.database_url.split("+", 1)[0].split(":", 1)[0]
+        return {"ok": True, "detail": kind}
+    except Exception as exc:
+        return {"ok": False, "detail": type(exc).__name__}
 
 
 async def collect_health() -> dict:
@@ -43,6 +60,7 @@ async def collect_health() -> dict:
             "detail": settings.github_repo if github_configured() else "GITHUB_TOKEN não definido",
         },
         "ai": {"calls": hermes.calls, "lastError": hermes.last_error},
+        "database": await _db_health(),
         "mcp": {
             "ok": bool(settings.mcp_token),
             "port": settings.mcp_port,
@@ -63,6 +81,13 @@ async def health_loop() -> None:
 async def lifespan(_: FastAPI):
     from integrations import brain
 
+    if settings.auto_migrate:
+        await db_engine.migrate()
+    kube = await asyncio.to_thread(k8s.check)
+    await repo.ensure_cluster(
+        settings.cluster_id, settings.cluster_name or kube.get("context") or settings.cluster_id, kube.get("context")
+    )
+    await orchestrator.recover()
     await asyncio.to_thread(brain.ensure_vault)
     watcher.start(asyncio.get_running_loop())
     tasks = [
@@ -85,6 +110,8 @@ app = FastAPI(
     description="AIOps para Kubernetes: detecção determinística, investigação pelo Hermes e remediação com aprovação humana.",
     lifespan=lifespan,
 )
+app.include_router(incidents_api.router)
+app.include_router(governance_api.router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=list(settings.cors_origins),
@@ -108,33 +135,14 @@ async def state() -> dict:
     return snap
 
 
-@app.get("/api/incidents")
-async def incidents() -> list[dict]:
-    return [i.model_dump(exclude={"logs", "events"}) for i in orchestrator.incidents.values()]
-
-
-@app.post("/api/simulate/incident", status_code=202)
-async def simulate_incident(req: SimulateRequest | None = None) -> dict:
-    inc = orchestrator.simulate(req or SimulateRequest())
-    return {"incidentId": inc.id, "type": inc.type, "useAi": (req or SimulateRequest()).useAi, "simulated": True}
-
-
-@app.post("/api/agents/approve/{incident_id}")
-async def approve(incident_id: str, body: DecisionRequest | None = None) -> dict:
-    try:
-        inc = await orchestrator.approve(incident_id, (body or DecisionRequest()).motivo)
-    except KeyError as exc:
-        raise HTTPException(404, "incidente inexistente ou sem aprovação pendente") from exc
-    return {"incidentId": inc.id, "status": inc.status, "command": inc.approval.command if inc.approval else None}
-
-
-@app.post("/api/agents/reject/{incident_id}")
-async def reject(incident_id: str, body: DecisionRequest | None = None) -> dict:
-    try:
-        inc = await orchestrator.reject(incident_id, (body or DecisionRequest()).motivo)
-    except KeyError as exc:
-        raise HTTPException(404, "incidente inexistente ou sem aprovação pendente") from exc
-    return {"incidentId": inc.id, "status": inc.status}
+@app.post("/api/simulate/incident", status_code=202, tags=["simulação"])
+async def simulate_incident(
+    actor: Annotated[Actor, Depends(current_actor)], req: SimulateRequest | None = None
+) -> dict:
+    req = req or SimulateRequest()
+    inc = orchestrator.simulate(req)
+    await repo.audit(actor.name, "incident.simulate", inc.id, {"type": req.type, "useAi": req.useAi}, actor.ip)
+    return {"incidentId": inc.id, "type": inc.type, "useAi": req.useAi, "simulated": True}
 
 
 @app.post("/api/test-communication", status_code=202)

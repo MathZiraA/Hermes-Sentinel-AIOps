@@ -299,9 +299,12 @@ def write_incident(inc: Any, timeline: list[str]) -> Path:
         bots = ["Monitor", "Supervisor", "Investigator", "Executor", "ITSM"]
         runbooks = [f"[[{Path(n).stem}]]" for n in rca.get("runbooks", [])] or ["(nenhum)"]
         evidence = "\n".join(f"- {e}" for e in rca.get("evidence", [])) or "- (sem evidências registradas)"
+        who = getattr(inc, "decisionBy", None) or "o operador"
         decision = {
-            "resolved": "aprovada e aplicada",
-            "rejected": "rejeitada pelo operador",
+            "resolved": f"aprovada por {who} e aplicada",
+            "postmortem": f"aprovada por {who} e aplicada",
+            "closed": f"rejeitada por {who}",
+            "rejected": f"rejeitada por {who}",
             "failed": "aprovada, mas falhou",
         }.get(inc.status, inc.status)
         body = (

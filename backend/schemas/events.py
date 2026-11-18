@@ -7,6 +7,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
+from domain.lifecycle import Sev, Status, normalize_status
+
 AgentId = Literal["monitor", "supervisor", "investigator", "executor", "itsm"]
 Zone = Literal["AGENT_FACTORY", "CENTRAL_HUB", "WHITEBOARD", "WORKSTATION", "VAULT", "KANBAN_WALL"]
 AgentStatus = Literal[
@@ -96,6 +98,7 @@ class DecisionRequest(BaseModel):
 
 class Incident(BaseModel):
     id: str
+    cluster: str = "local"
     # Qualquer anomalia vira incidente (OOMKilled, FailedMount, NodeDiskPressure…), não só as 3 simuláveis
     type: str
     namespace: str
@@ -103,13 +106,20 @@ class Incident(BaseModel):
     container: str | None = None
     deployment: str | None = None
     resourceKind: str = "Pod"
-    severity: str = "alta"
+    severity: str = "alta"  # sugestão do Monitor (crítica/alta/média/baixa)
+    sev: Sev = "SEV3"
     reason: str
     detectedAt: str = Field(default_factory=now_iso)
+    acknowledgedAt: str | None = None
+    acknowledgedBy: str | None = None
+    resolvedAt: str | None = None
     simulated: bool = False
-    status: Literal["open", "investigating", "waiting_approval", "remediating", "resolved", "rejected", "failed"] = (
-        "open"
-    )
+    status: Status = "detected"
+    proposedBy: str = "sistema"  # quem propôs a correção (bot, Hermes ou pessoa)
+    decision: Literal["approved", "rejected"] | None = None
+    decisionBy: str | None = None
+    decisionReason: str | None = None
+    decidedAt: str | None = None
     logs: str = ""
     events: str = ""
     rca: dict | None = None
@@ -119,3 +129,9 @@ class Incident(BaseModel):
     remediationResult: str | None = None
     postmortemPath: str | None = None
     issueUrl: str | None = None
+
+    @field_validator("status", mode="before")
+    @classmethod
+    def _legacy_status(cls, v: str) -> str:
+        """Aceita os nomes da 0.1.0 ("open", "rejected") e converte para o ciclo novo."""
+        return normalize_status(v) if isinstance(v, str) else v
