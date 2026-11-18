@@ -22,7 +22,8 @@ export type Permission =
   | "audit:read"
   | "users:manage"
   | "teams:manage"
-  | "settings:manage";
+  | "settings:manage"
+  | "silences:manage";
 
 export interface CurrentUser {
   id: string;
