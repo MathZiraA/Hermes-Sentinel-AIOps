@@ -1,12 +1,33 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+# ─────────────────────────────────────────────────────────────── segredos (NUNCA vão para o Git)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*-acesso.txt
+secrets/
 
+# ─────────────────────────────────────────────────────────────── dados de runtime
+# Hermes Brain: só os runbooks oficiais são versionados. Incidentes, lições, diários,
+# serviços e padrões são gerados pelo produto em cada instalação.
+obsidian-vault/*
+!obsidian-vault/06 - Runbooks/
+obsidian-vault/06 - Runbooks/*
+!obsidian-vault/06 - Runbooks/Runbook - *.md
+
+# ─────────────────────────────────────────────────────────────── Python (backend)
+backend/.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# ─────────────────────────────────────────────────────────────── Node / frontend
 node_modules
 dist
 dist-ssr
@@ -15,12 +36,24 @@ dist-ssr
 .tanstack/**
 .nitro
 *.local
+coverage/
+# O projeto usa bun.lock (Lovable); um package-lock local não é versionado
+package-lock.json
 
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars
 
-# Editor directories and files
+# ─────────────────────────────────────────────────────────────── logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ─────────────────────────────────────────────────────────────── editores e SO
 .vscode/*
 !.vscode/extensions.json
 .idea

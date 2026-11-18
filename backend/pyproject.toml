@@ -1,0 +1,35 @@
+[project]
+name = "hermes-sentinel-backend"
+version = "0.1.0"
+description = "Hermes Sentinel: AIOps para Kubernetes com time de agentes, aprovação humana e memória em Obsidian."
+readme = "../README.md"
+license = "MIT"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = [".venv"]
+
+[tool.ruff.lint]
+# E/F: erros e pyflakes · W: avisos · I: imports ordenados · B: bugbear · UP: sintaxe moderna
+# S: segurança (bandit) · SIM: simplificações · RUF: regras do ruff · ASYNC: armadilhas de asyncio
+select = ["E", "F", "W", "I", "B", "UP", "S", "SIM", "RUF", "ASYNC"]
+ignore = [
+  "E501",                        # tamanho de linha é do formatador; strings longas (logs, prompts) ficam inteiras
+  "RUF001", "RUF002", "RUF003",  # textos em português usam "–", "·" e aspas tipográficas de propósito
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106"]  # assert e tokens falsos são normais em testes
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.coverage.run]
+source = ["."]
+omit = [".venv/*", "tests/*"]

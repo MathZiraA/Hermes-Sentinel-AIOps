@@ -1,5 +1,8 @@
 {
-  "name": "tanstack_start_ts",
+  "name": "hermes-sentinel",
+  "version": "0.1.0",
+  "description": "Hermes Sentinel: AIOps para Kubernetes com time de agentes e aprovação humana",
+  "license": "MIT",
   "private": true,
   "sideEffects": false,
   "type": "module",

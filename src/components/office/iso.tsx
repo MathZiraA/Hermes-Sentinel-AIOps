@@ -35,29 +35,62 @@ type BoxProps = {
  * isometric camera can see. Coordinates are in floor space.
  */
 export function IsoBox({
-  x, y, z = 0, w, d, h, mat, top, south, west, shadow, className,
-  topClassName, southClassName, westClassName,
+  x,
+  y,
+  z = 0,
+  w,
+  d,
+  h,
+  mat,
+  top,
+  south,
+  west,
+  shadow,
+  className,
+  topClassName,
+  southClassName,
+  westClassName,
 }: BoxProps) {
   return (
-    <div className={cn("iso-obj", mat, className)} style={{ left: x, top: y, width: w, height: d, transform: `translateZ(${z}px)` }}>
+    <div
+      className={cn("iso-obj", mat, className)}
+      style={{ left: x, top: y, width: w, height: d, transform: `translateZ(${z}px)` }}
+    >
       {shadow && (
         <div
           className="iso-box-shadow absolute"
-          style={{ left: -6, top: 4, width: w + 10, height: d + 10, transform: `translateZ(${-z + 0.4}px)` }}
+          style={{
+            left: -6,
+            top: 4,
+            width: w + 10,
+            height: d + 10,
+            transform: `translateZ(${-z + 0.4}px)`,
+          }}
         />
       )}
-      <div className={cn("iso-face iso-top", topClassName)} style={{ width: w, height: d, transform: `translateZ(${h}px)` }}>
+      <div
+        className={cn("iso-face iso-top", topClassName)}
+        style={{ width: w, height: d, transform: `translateZ(${h}px)` }}
+      >
         {top}
       </div>
       <div
         className={cn("iso-face iso-south", southClassName)}
-        style={{ width: w, height: h, transform: `translateY(${d}px) translateZ(${h}px) rotateX(-90deg)` }}
+        style={{
+          width: w,
+          height: h,
+          transform: `translateY(${d}px) translateZ(${h}px) rotateX(-90deg)`,
+        }}
       >
         {south}
       </div>
       <div
         className={cn("iso-face iso-west", westClassName)}
-        style={{ width: d, height: h, transform: `translateZ(${h}px) rotateZ(90deg) rotateX(-90deg)` }}
+        style={{
+          width: d,
+          height: h,
+          transform: `translateZ(${h}px) rotateZ(90deg) rotateX(-90deg)`,
+        }}
       >
         {west}
       </div>
@@ -67,10 +100,29 @@ export function IsoBox({
 
 /** Flat element painted on the floor (or at height z), lying in the floor plane. */
 export function Decal({
-  x, y, z = 0.5, w, d, className, style, children,
-}: { x: number; y: number; z?: number; w: number; d: number; className?: string; style?: CSSProperties; children?: ReactNode }) {
+  x,
+  y,
+  z = 0.5,
+  w,
+  d,
+  className,
+  style,
+  children,
+}: {
+  x: number;
+  y: number;
+  z?: number;
+  w: number;
+  d: number;
+  className?: string;
+  style?: CSSProperties;
+  children?: ReactNode;
+}) {
   return (
-    <div className={cn("absolute", className)} style={{ left: x, top: y, width: w, height: d, transform: `translateZ(${z}px)`, ...style }}>
+    <div
+      className={cn("absolute", className)}
+      style={{ left: x, top: y, width: w, height: d, transform: `translateZ(${z}px)`, ...style }}
+    >
       {children}
     </div>
   );
@@ -82,8 +134,22 @@ export function Decal({
  * screen equals `height` px of content.
  */
 export function Billboard({
-  x, y, z = 0, width, height, children, className,
-}: { x: number; y: number; z?: number; width: number; height: number; children: ReactNode; className?: string }) {
+  x,
+  y,
+  z = 0,
+  width,
+  height,
+  children,
+  className,
+}: {
+  x: number;
+  y: number;
+  z?: number;
+  width: number;
+  height: number;
+  children: ReactNode;
+  className?: string;
+}) {
   return (
     <div className="iso-anchor" style={{ left: x, top: y, transform: `translateZ(${z}px)` }}>
       <div

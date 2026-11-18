@@ -3,11 +3,25 @@ import { agentClass, type Accessory, type AgentColor } from "./agents";
 
 /** Glossy plastic pill-shaped agent. Pure CSS; ~48x76 px. */
 export function AgentFigure({
-  color, accessory, seated, size = 1,
-}: { color: AgentColor; accessory?: Accessory | undefined; seated?: boolean | undefined; size?: number }) {
+  color,
+  accessory,
+  seated,
+  size = 1,
+}: {
+  color: AgentColor;
+  accessory?: Accessory | undefined;
+  seated?: boolean | undefined;
+  size?: number;
+}) {
   return (
-    <div className={cn("relative", agentClass(color))} style={{ width: 48 * size, height: 76 * size }}>
-      <div className="absolute bottom-0 left-0 origin-bottom-left" style={{ transform: `scale(${size})`, width: 48, height: 76 }}>
+    <div
+      className={cn("relative", agentClass(color))}
+      style={{ width: 48 * size, height: 76 * size }}
+    >
+      <div
+        className="absolute bottom-0 left-0 origin-bottom-left"
+        style={{ transform: `scale(${size})`, width: 48, height: 76 }}
+      >
         {/* antenna */}
         <div className="absolute left-1/2 top-0 h-3 w-[2px] -translate-x-1/2 rounded-full bg-ink-soft/40" />
         <div className="agent-body absolute left-1/2 top-[-4px] h-[9px] w-[9px] -translate-x-1/2 rounded-full" />

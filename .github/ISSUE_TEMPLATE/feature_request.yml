@@ -1,0 +1,28 @@
+name: Funcionalidade
+description: Sugira uma melhoria ou funcionalidade nova
+title: "feat: "
+labels: [enhancement, triagem]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problema
+      description: Que dor do dia a dia de operação isso resolve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposta
+      description: Como você imagina a solução?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternativas consideradas
+  - type: dropdown
+    id: phase
+    attributes:
+      label: Fase do roadmap relacionada
+      options: ["1 · Persistência", "2 · Identidade", "3 · Interface", "4 · Operação", "5 · Integrações", "6 · IA", "7 · Distribuição", "Nenhuma / não sei"]

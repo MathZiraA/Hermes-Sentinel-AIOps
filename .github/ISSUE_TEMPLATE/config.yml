@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Relatar vulnerabilidade (privado)
+    url: https://github.com/MathZiraA/Hermes-Sentinel-AIOps/security/advisories/new
+    about: Nunca abra issue pública para falhas de segurança.
+  - name: Documentação
+    url: https://github.com/MathZiraA/Hermes-Sentinel-AIOps/tree/main/docs
+    about: Instalação, configuração, arquitetura e manual do usuário.

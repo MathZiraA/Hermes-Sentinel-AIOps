@@ -11,9 +11,9 @@ const EASE_OUT = "ease-[cubic-bezier(0.23,1,0.32,1)]";
 
 const STATUS: Record<CommPhase, string> = {
   idle: "Pronto para testar",
-  walking: "Atlas está indo até Ember…",
+  walking: "Supervisor está indo até o Monitor…",
   talking: "Trocando dados…",
-  returning: "Atlas está voltando…",
+  returning: "Supervisor está voltando ao Central Hub…",
 };
 
 type TokenProps = {
@@ -113,7 +113,10 @@ export function CommunicationScene() {
       </div>
 
       {/* Row is the positioning parent for the bubble, so the bubble lives outside both agents. */}
-      <div ref={rowRef} className="relative mt-16 flex w-full max-w-4xl justify-between px-4 sm:px-10">
+      <div
+        ref={rowRef}
+        className="relative mt-16 flex w-full max-w-4xl justify-between px-4 sm:px-10"
+      >
         <div
           aria-hidden
           className="pointer-events-none absolute inset-x-16 top-12 border-t-2 border-dashed border-border sm:inset-x-24"
@@ -126,8 +129,8 @@ export function CommunicationScene() {
           style={{ transform: `translate3d(${atB ? layout.distance : 0}px, 0, 0)` }}
         >
           <AgentToken
-            name="Atlas"
-            role="Agente A · Builder"
+            name="Supervisor"
+            role="Agente A · Coordenador"
             src={atlasImg}
             ring="ring-agent-blue/40"
             glow="ring-agent-blue/25"
@@ -138,8 +141,8 @@ export function CommunicationScene() {
 
         <div ref={bRef} className="relative z-10 shrink-0">
           <AgentToken
-            name="Ember"
-            role="Agente B · Keeper"
+            name="Monitor"
+            role="Agente B · Watcher do cluster"
             src={emberImg}
             ring="ring-agent-orange/40"
             glow="ring-agent-orange/30"
@@ -159,7 +162,9 @@ export function CommunicationScene() {
               "relative w-64 max-w-[calc(100vw-2rem)] origin-bottom rounded-2xl border border-border bg-card px-4 py-3 shadow-card",
               "transform-gpu transition-[opacity,transform] duration-300",
               EASE_OUT,
-              isTalking ? "translate-y-0 scale-100 opacity-100" : "translate-y-2 scale-90 opacity-0",
+              isTalking
+                ? "translate-y-0 scale-100 opacity-100"
+                : "translate-y-2 scale-90 opacity-0",
             )}
           >
             <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
@@ -167,10 +172,10 @@ export function CommunicationScene() {
               Troca de dados
             </div>
             <p className="mt-1.5 text-[13px] font-medium leading-snug text-foreground">
-              Atlas: “SAMS-201 pronto para revisão.”
+              Supervisor: “Monitor, como está o cluster?”
             </p>
             <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-              Ember: “Recebido! Validando
+              Monitor: “Tudo vigiado! Conferindo os pods
               <span className="inline-flex gap-0.5">
                 <span className="anim-type h-1 w-1 rounded-full bg-muted-foreground" />
                 <span className="anim-type h-1 w-1 rounded-full bg-muted-foreground [animation-delay:0.15s]" />
