@@ -1,0 +1,12 @@
+apiVersion: v2
+name: hermes-sentinel
+description: AIOps para Kubernetes com time de agentes, aprovação humana e memória que aprende.
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords: [aiops, kubernetes, incident-response, sre]
+home: https://github.com/MathZiraA/Hermes-Sentinel-AIOps
+sources: [https://github.com/MathZiraA/Hermes-Sentinel-AIOps]
+maintainers:
+  - name: MathZiraA
+    url: https://github.com/MathZiraA

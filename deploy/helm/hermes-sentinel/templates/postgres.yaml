@@ -1,0 +1,62 @@
+{{- if and .Values.central.enabled .Values.postgresql.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "sentinel.fullname" . }}-postgres
+  labels: {{- include "sentinel.labels" . | nindent 4 }}
+spec:
+  clusterIP: None
+  selector: {{- include "sentinel.selector" (dict "root" . "component" "postgres") | nindent 4 }}
+  ports:
+    - name: postgres
+      port: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "sentinel.fullname" . }}-postgres
+  labels: {{- include "sentinel.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "sentinel.fullname" . }}-postgres
+  replicas: 1
+  selector:
+    matchLabels: {{- include "sentinel.selector" (dict "root" . "component" "postgres") | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "sentinel.selector" (dict "root" . "component" "postgres") | nindent 8 }}
+    spec:
+      securityContext:
+        fsGroup: 70
+        runAsUser: 70
+        runAsNonRoot: true
+      containers:
+        - name: postgres
+          image: {{ .Values.postgresql.image }}
+          env:
+            - {name: POSTGRES_DB, value: sentinel}
+            - {name: POSTGRES_USER, value: sentinel}
+            - name: POSTGRES_PASSWORD
+              valueFrom: {secretKeyRef: {name: {{ include "sentinel.secretName" . }}, key: POSTGRES_PASSWORD}}
+            - {name: PGDATA, value: /var/lib/postgresql/data/pgdata}
+          ports:
+            - {name: postgres, containerPort: 5432}
+          readinessProbe:
+            exec: {command: [pg_isready, -U, sentinel, -d, sentinel]}
+            periodSeconds: 5
+          resources:
+            requests: {cpu: 50m, memory: 128Mi}
+            limits: {memory: 512Mi}
+          volumeMounts:
+            - {name: data, mountPath: /var/lib/postgresql/data}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        {{- with .Values.postgresql.storageClass }}
+        storageClassName: {{ . }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.postgresql.size }}
+{{- end }}

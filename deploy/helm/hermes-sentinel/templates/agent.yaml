@@ -1,0 +1,34 @@
+{{- if .Values.agent.enabled }}
+{{- if not .Values.agent.centralUrl }}{{ fail "agent.centralUrl é obrigatório com agent.enabled=true" }}{{ end }}
+{{- if not .Values.agent.existingSecret }}{{ fail "agent.existingSecret (com SENTINEL_AGENT_TOKEN) é obrigatório" }}{{ end }}
+# Agente de cluster remoto: só conexões de SAÍDA para a central; executa apenas correções aprovadas lá.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "sentinel.fullname" . }}-agent
+  labels: {{- include "sentinel.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  strategy: {type: Recreate}
+  selector:
+    matchLabels: {{- include "sentinel.selector" (dict "root" . "component" "agent") | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "sentinel.selector" (dict "root" . "component" "agent") | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "sentinel.serviceAccount" . }}
+      securityContext: {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: agent
+          image: {{ include "sentinel.backendImage" . }}
+          imagePullPolicy: {{ .Values.image.backend.pullPolicy }}
+          command: [python, -m, agent]
+          securityContext: {{- toYaml .Values.securityContext | nindent 12 }}
+          env:
+            - {name: SENTINEL_URL, value: {{ .Values.agent.centralUrl | quote }}}
+            - {name: K8S_NAMESPACES, value: {{ join "," .Values.agent.namespaces | quote }}}
+            - {name: KUBECONFIG_PATH, value: /nonexistent}
+            - name: SENTINEL_AGENT_TOKEN
+              valueFrom: {secretKeyRef: {name: {{ .Values.agent.existingSecret }}, key: SENTINEL_AGENT_TOKEN}}
+          resources: {{- toYaml .Values.agent.resources | nindent 12 }}
+{{- end }}

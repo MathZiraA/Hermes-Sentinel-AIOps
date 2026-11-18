@@ -1,0 +1,94 @@
+# Hermes Sentinel — valores padrão. Ver docs/operations/deploy-helm.md.
+#
+# Dois modos:
+#   central (padrão): API + interface + Monitor deste cluster.
+#   agente: só o agente, num cluster remoto (central.enabled=false, agent.enabled=true).
+
+image:
+  backend:
+    repository: ghcr.io/mathziraa/hermes-sentinel-backend
+    tag: ""            # padrão: appVersion do chart
+    pullPolicy: IfNotPresent
+  web:
+    repository: ghcr.io/mathziraa/hermes-sentinel-web
+    tag: ""
+    pullPolicy: IfNotPresent
+imagePullSecrets: []
+
+central:
+  enabled: true
+  replicaCount: 1      # 1 réplica: o Monitor e a cadeia de auditoria assumem um escritor único (ADR 0008)
+  clusterId: local
+  clusterName: ""
+  # Namespaces vigiados (o MCP e o RBAC também se limitam a eles quando rbac.namespaced=true)
+  namespaces: [default]
+  publicUrl: https://sentinel.example.com
+  # Variáveis extras (não secretas): AI_PROVIDER, SLA_*, GRAFANA_URL, LOKI_URL…
+  env: {}
+  # Secret existente com DATABASE_URL, SENTINEL_SECRET_KEY e as chaves de integrações/IA.
+  # Vazio = o chart cria um Secret (DATABASE_URL aponta para o PostgreSQL embutido).
+  existingSecret: ""
+  resources:
+    requests: {cpu: 100m, memory: 256Mi}
+    limits: {memory: 768Mi}
+  web:
+    replicaCount: 2
+    resources:
+      requests: {cpu: 50m, memory: 96Mi}
+      limits: {memory: 256Mi}
+  persistence:            # Hermes Brain (vault Obsidian)
+    enabled: true
+    size: 1Gi
+    storageClass: ""
+    accessMode: ReadWriteOnce
+
+# PostgreSQL embutido (demo/avaliação). Em produção, use um banco gerenciado via central.existingSecret.
+postgresql:
+  enabled: true
+  image: docker.io/library/postgres:17-alpine
+  size: 5Gi
+  storageClass: ""
+
+agent:
+  enabled: false
+  centralUrl: ""          # ex.: https://sentinel.empresa.com
+  existingSecret: ""      # Secret com SENTINEL_AGENT_TOKEN (gerado em POST /api/admin/clusters)
+  namespaces: [default]
+  resources:
+    requests: {cpu: 50m, memory: 128Mi}
+    limits: {memory: 384Mi}
+
+rbac:
+  create: true
+  # true = só lê os namespaces vigiados (Role por namespace) + nós; false = ClusterRole de leitura
+  namespaced: false
+  # Permissões de escrita das correções (desligue para um modo só-leitura/recomendação)
+  remediation: true
+
+serviceAccount:
+  create: true
+  name: ""
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  host: sentinel.example.com
+  tls: []                 # [{secretName: sentinel-tls, hosts: [sentinel.example.com]}]
+
+metrics:
+  serviceMonitor:
+    enabled: false        # requer o Prometheus Operator
+    interval: 30s
+
+podSecurityContext:
+  runAsNonRoot: true
+  seccompProfile: {type: RuntimeDefault}
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities: {drop: [ALL]}
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

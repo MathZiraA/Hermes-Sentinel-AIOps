@@ -1,0 +1,14 @@
+{{- if .Values.central.enabled }}
+Hermes Sentinel {{ .Chart.AppVersion }} instalado.
+
+1. Abra {{ .Values.central.publicUrl }}{{ if not .Values.ingress.enabled }} (sem Ingress: kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "sentinel.fullname" . }}-web 3000 e svc/{{ include "sentinel.fullname" . }}-backend 8000){{ end }}
+   e crie o administrador na tela de configuração inicial.
+2. Vigiando os namespaces: {{ join ", " .Values.central.namespaces }}.
+3. Métricas Prometheus em svc/{{ include "sentinel.fullname" . }}-backend:8000/metrics (só na rede interna).
+{{- if .Values.postgresql.enabled }}
+4. Usando o PostgreSQL embutido (avaliação). Em produção, use um banco gerenciado: central.existingSecret.
+{{- end }}
+{{- end }}
+{{- if .Values.agent.enabled }}
+Agente do Hermes Sentinel ligado à central {{ .Values.agent.centralUrl }}.
+{{- end }}
