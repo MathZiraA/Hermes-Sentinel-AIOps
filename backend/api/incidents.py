@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, Field
 
 from agents.orchestrator import orchestrator
 from api.deps import Actor, actor_for, require
@@ -13,8 +15,8 @@ from config import settings
 from db import repository as repo
 from domain.lifecycle import STATUS_LABEL, SlaPolicy
 from domain.permissions import Principal
-from integrations import observability
-from schemas.events import DecisionRequest, Incident
+from integrations import brain, observability
+from schemas.events import DecisionRequest, Incident, now_iso
 
 router = APIRouter(prefix="/api", tags=["incidentes"])
 sla = SlaPolicy(settings.sla_ack_minutes, settings.sla_resolve_minutes)
@@ -129,6 +131,41 @@ async def _decide(incident_id: str, approve: bool, body: DecisionRequest | None,
         actor.ip,
     )
     return {"incidentId": inc.id, "status": inc.status, "command": inc.approval.command if inc.approval else None}
+
+
+class Rating(BaseModel):
+    correct: bool
+    note: str = Field(default="", max_length=600)
+
+
+@router.post("/incidents/{incident_id}/rating", summary="Avaliar o diagnóstico (certo/errado)")
+async def rate_rca(
+    incident_id: str, body: Rating, actor: Annotated[Actor, Depends(actor_for("incidents:decide"))]
+) -> dict[str, Any]:
+    found = await repo.get_incident(incident_id)
+    if not found:
+        raise HTTPException(404, "incidente não encontrado")
+    inc = _live(incident_id) or found[0]
+    _ensure_visible(actor.principal, inc)
+    if not inc.rca:
+        raise HTTPException(409, "o incidente ainda não tem diagnóstico")
+    if not body.correct and not body.note.strip():
+        raise HTTPException(422, "diga o que estava errado: isso vira uma lição para o time")
+    inc.rcaRating = {"correct": body.correct, "note": body.note.strip() or None, "by": actor.name, "at": now_iso()}
+    await repo.save_incident(inc)
+    await repo.add_event(
+        inc.id,
+        f"{actor.name} avaliou o diagnóstico como {'correto' if body.correct else 'errado'}"
+        + (f": {body.note.strip()}" if body.note.strip() else ""),
+        actor=actor.name,
+        kind="rating",
+    )
+    await repo.audit(
+        actor.name, "rca.rate", inc.id, {"correct": body.correct, "source": inc.rca.get("source")}, actor.ip
+    )
+    if not body.correct:
+        await asyncio.to_thread(brain.write_lesson, inc, "rca_wrong", f"Diagnóstico errado: {body.note.strip()}")
+    return summary_of(inc)
 
 
 @router.post("/agents/approve/{incident_id}", summary="Aprovar a correção proposta")

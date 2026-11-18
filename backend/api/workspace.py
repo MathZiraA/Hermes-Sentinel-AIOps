@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from api.deps import require
 from config import settings
 from domain.permissions import Principal
-from integrations import brain
+from integrations import brain, brain_index
 from k8s.client import K8sUnavailable, k8s
 from k8s.watcher import watcher
 
@@ -44,8 +44,8 @@ async def brain_graph(_: BrainReader) -> dict[str, Any]:
 @router.get("/brain/search", summary="Busca no Hermes Brain")
 async def brain_search(
     _: BrainReader, q: Annotated[str, Query(min_length=2, max_length=200)], limit: int = 10
-) -> list[dict[str, str]]:
-    return await asyncio.to_thread(brain.search, q, max(1, min(limit, 30)))
+) -> list[dict[str, Any]]:
+    return await brain_index.search(q, max(1, min(limit, 30)))
 
 
 @router.get("/brain/notes/{name}", summary="Uma nota do Hermes Brain")

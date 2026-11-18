@@ -127,6 +127,7 @@ class Incident(BaseModel):
     rollout: dict | None = None  # deploy recente correlacionado ao incidente
     autoRemediatedBy: str | None = None  # política de autorremediação que aprovou sozinha
     ticket: dict | None = None  # ticket externo (Jira): {"system", "key", "url"}
+    rcaRating: dict | None = None  # avaliação humana do diagnóstico: {"correct", "note", "by", "at"}
     source: str = "kubernetes"  # kubernetes | zabbix | hermes
     external: dict | None = None  # dados da origem externa (ex.: evento do Zabbix)
     logs: str = ""
