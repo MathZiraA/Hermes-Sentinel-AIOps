@@ -1308,6 +1308,180 @@
         }
       }
     },
+    "/api/clusters/{cluster_id}/status": {
+      "get": {
+        "tags": [
+          "telas"
+        ],
+        "summary": "Nós, workloads e pods do cluster",
+        "operationId": "cluster_status_api_clusters__cluster_id__status_get",
+        "parameters": [
+          {
+            "name": "cluster_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Cluster Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Cluster Status Api Clusters  Cluster Id  Status Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/brain/graph": {
+      "get": {
+        "tags": [
+          "telas"
+        ],
+        "summary": "Grafo do Hermes Brain (notas e wikilinks)",
+        "operationId": "brain_graph_api_brain_graph_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Brain Graph Api Brain Graph Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/brain/search": {
+      "get": {
+        "tags": [
+          "telas"
+        ],
+        "summary": "Busca no Hermes Brain",
+        "operationId": "brain_search_api_brain_search_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 200,
+              "title": "Q"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 10,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  },
+                  "title": "Response Brain Search Api Brain Search Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/brain/notes/{name}": {
+      "get": {
+        "tags": [
+          "telas"
+        ],
+        "summary": "Uma nota do Hermes Brain",
+        "operationId": "brain_note_api_brain_notes__name__get",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Brain Note Api Brain Notes  Name  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/healthz": {
       "get": {
         "tags": [

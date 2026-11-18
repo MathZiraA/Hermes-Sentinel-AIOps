@@ -58,6 +58,10 @@ exige uma permissão do papel (tabela abaixo) e filtra pelo escopo dos times do 
 | `GET` | `/api/audit/export?format=json\|csv` | Exporta a auditoria completa |
 | `GET` | `/api/reports/summary?days=30` | MTTA, MTTR, volume por SEV, status, serviço e tipo, e decisões |
 | `GET` | `/api/clusters` | Clusters conhecidos e incidentes abertos em cada um |
+| `GET` | `/api/clusters/{id}/status` | Nós, workloads, pods saudáveis e estado do Monitor |
+| `GET` | `/api/brain/graph` | Notas e wikilinks do Hermes Brain (para o grafo) |
+| `GET` | `/api/brain/search?q=` | Busca na memória |
+| `GET` | `/api/brain/notes/{nome}` | Conteúdo de uma nota (Markdown) |
 
 ### Ciclo de vida e severidade
 
