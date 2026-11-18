@@ -86,7 +86,11 @@ export interface IncidentSummary {
     images: string[];
     previousImages: string[];
     ageMinutes: number | null;
+    commits?: { sha: string; message: string; author: string; url: string }[];
   } | null;
+  source: string;
+  ticket: { system: string; key: string; url: string } | null;
+  links: { grafana?: string; logs?: string; ticket?: string; source?: string };
   postmortemPath: string | null;
   issueUrl: string | null;
   sla: Sla;
