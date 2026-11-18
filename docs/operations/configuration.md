@@ -19,6 +19,17 @@ o [`.env.example`](../../.env.example) lista tudo sem valores.
 | `GEMINI_FALLBACK_MODEL` | `gemini-3.5-flash-lite` | Modelo do fallback direto |
 | `SSL_CERT_FILE` | bundle do sistema | CA usada para validar o HTTPS do gateway |
 
+## Provedor e orçamento de IA
+
+| Variável | Padrão | Descrição |
+|---|---|---|
+| `AI_PROVIDER` | `hermes` | `hermes` (agente com MCP), `openai` (qualquer API compatível) ou `gemini` |
+| `AI_BASE_URL` / `AI_API_KEY` / `AI_MODEL` | — | Para `openai`: ex. `https://api.openai.com/v1`, `http://localhost:11434/v1` (Ollama) |
+| `AI_DAILY_CALL_LIMIT` | `200` | Chamadas por dia (0 = sem limite). Acima disso, diagnóstico pelos runbooks |
+| `AI_DAILY_TOKEN_LIMIT` | `0` | Tokens por dia (0 = sem limite) |
+| `AI_COST_INPUT_PER_1K` / `AI_COST_OUTPUT_PER_1K` | `0` | Preço por mil tokens, para o custo estimado nos relatórios |
+| `AI_EMBEDDINGS` / `AI_EMBEDDING_MODEL` | `false` / `text-embedding-004` | Busca semântica no Hermes Brain (Gemini ou API compatível) |
+
 ## Kubernetes
 
 | Variável | Padrão | Descrição |

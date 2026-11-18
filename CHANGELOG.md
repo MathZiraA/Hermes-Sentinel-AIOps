@@ -61,6 +61,12 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
   `buscar_logs_loki`) e **GitHub** (commits do deploy correlacionado).
 - Links externos no detalhe do incidente e estado das integrações na tela de Clusters.
 
+- **Provedor de IA trocável**: Hermes (agente com MCP), qualquer API compatível com OpenAI (OpenAI, Claude, Ollama,
+  vLLM) ou Gemini direto.
+- **Orçamento diário** de chamadas e tokens com corte automático, consumo por dia e custo estimado nos Relatórios.
+- **Avaliação humana do diagnóstico** (certo/errado), com lição automática e taxa de acerto por fonte.
+- **Memória indexada no banco**, sincronizada com o Obsidian, com busca BM25 sem acento e busca semântica opcional.
+
 ### Segurança
 
 - Logs e eventos tratados como dados não confiáveis, com redação de segredos antes de qualquer envio.

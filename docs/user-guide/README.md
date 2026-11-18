@@ -82,6 +82,12 @@ ele reabre o incidente para uma nova investigação (uma vez) e, na segunda falh
 - **Plantão:** cadastre turnos primário e secundário por time. Sem reconhecimento no prazo de SLA, o incidente sobe
   para o secundário e, no dobro do prazo, para os administradores. O detalhe do incidente mostra os responsáveis.
 
+## Avaliar o diagnóstico
+
+No detalhe do incidente, em **Causa raiz**, marque se o diagnóstico estava **Certo** ou **Errado**. Ao marcar errado,
+explique o que era: isso vira uma Lição, e os **Relatórios** mostram a taxa de acerto dos bots e o consumo de IA
+(chamadas, tokens, custo e bloqueios pelo orçamento diário).
+
 ## Treinar o time pelo Hermes Brain
 
 Abra o vault no Obsidian ([instalação](../operations/installation.md#abrir-o-hermes-brain-no-obsidian)).
