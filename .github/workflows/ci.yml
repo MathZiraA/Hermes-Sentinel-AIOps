@@ -108,6 +108,38 @@ jobs:
       - name: Build
         run: bun run build
 
+  helm:
+    name: Helm chart
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - name: helm lint
+        run: helm lint deploy/helm/hermes-sentinel --strict
+      - name: Renderizar (central e agente)
+        run: |
+          helm template t deploy/helm/hermes-sentinel > central.yaml
+          helm template t deploy/helm/hermes-sentinel --set ingress.enabled=true --set metrics.serviceMonitor.enabled=true > full.yaml
+          helm template t deploy/helm/hermes-sentinel --set central.enabled=false --set agent.enabled=true \
+            --set agent.centralUrl=https://central --set agent.existingSecret=agent-token > agent.yaml
+      - name: Validar contra os schemas do Kubernetes (kubeconform)
+        run: |
+          curl -sSL https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz | tar xz
+          ./kubeconform -strict -summary -ignore-missing-schemas central.yaml full.yaml agent.yaml
+
+  images:
+    name: Imagens (build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Backend
+        uses: docker/build-push-action@v6
+        with: {context: ., file: backend/Dockerfile, push: false, cache-from: type=gha, cache-to: "type=gha,mode=max"}
+      - name: Web
+        uses: docker/build-push-action@v6
+        with: {context: ., file: Dockerfile, push: false, cache-from: type=gha, cache-to: "type=gha,mode=max"}
+
   shell:
     name: Scripts (shellcheck)
     runs-on: ubuntu-latest
