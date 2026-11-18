@@ -145,6 +145,52 @@
   --sidebar-ring: oklch(0.6 0.165 252);
 }
 
+/* Tema escuro do painel (o escritório isométrico mantém a paleta própria). */
+.dark {
+  --background: oklch(0.17 0.012 262);
+  --foreground: oklch(0.95 0.006 255);
+  --card: oklch(0.21 0.014 262);
+  --card-foreground: oklch(0.95 0.006 255);
+  --popover: oklch(0.21 0.014 262);
+  --popover-foreground: oklch(0.95 0.006 255);
+  --primary: oklch(0.68 0.15 252);
+  --primary-foreground: oklch(0.16 0.02 262);
+  --secondary: oklch(0.26 0.015 262);
+  --secondary-foreground: oklch(0.92 0.008 255);
+  --muted: oklch(0.25 0.013 262);
+  --muted-foreground: oklch(0.7 0.015 258);
+  --accent: oklch(0.28 0.025 255);
+  --accent-foreground: oklch(0.94 0.01 255);
+  --destructive: oklch(0.65 0.2 25);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(0.3 0.014 262);
+  --input: oklch(0.32 0.014 262);
+  --ring: oklch(0.68 0.15 252);
+  --success: oklch(0.72 0.16 150);
+  --sidebar: oklch(0.15 0.012 262);
+  --sidebar-foreground: oklch(0.92 0.008 255);
+  --sidebar-primary: oklch(0.68 0.15 252);
+  --sidebar-primary-foreground: oklch(0.16 0.02 262);
+  --sidebar-accent: oklch(0.24 0.016 262);
+  --sidebar-accent-foreground: oklch(0.95 0.006 255);
+  --sidebar-border: oklch(0.27 0.014 262);
+  --sidebar-ring: oklch(0.68 0.15 252);
+}
+
+/* Severidades (mesma escala nos dois temas) */
+:root {
+  --sev1: oklch(0.62 0.21 25);
+  --sev2: oklch(0.72 0.17 50);
+  --sev3: oklch(0.8 0.15 88);
+  --sev4: oklch(0.66 0.13 248);
+}
+@theme inline {
+  --color-sev1: var(--sev1);
+  --color-sev2: var(--sev2);
+  --color-sev3: var(--sev3);
+  --color-sev4: var(--sev4);
+}
+
 @layer base {
   * {
     border-color: var(--color-border);
