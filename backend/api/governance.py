@@ -59,3 +59,10 @@ async def clusters(principal: ClusterReader) -> list[dict[str, Any]]:
         return visible
     allowed = {s.cluster for s in principal.scopes}
     return [c for c in visible if "*" in allowed or c["id"] in allowed]
+
+
+@router.get("/ai/usage", summary="Consumo de IA: chamadas, tokens, custo estimado e orçamento")
+async def ai_usage(_: Reporter, days: Annotated[int, Query(ge=1, le=90)] = 30) -> dict[str, Any]:
+    from db import ai
+
+    return await ai.usage(days)

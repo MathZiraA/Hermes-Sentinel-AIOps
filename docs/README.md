@@ -27,3 +27,4 @@
 | [0010](architecture/adr/0010-interface-profissional.md) | Interface profissional com painel principal e sala de guerra |
 | [0011](architecture/adr/0011-operacao.md) | Operação: ações, verificação, silêncios, autorremediação e plantão |
 | [0012](architecture/adr/0012-integracoes.md) | Integrações por canais e enriquecimento opcional |
+| [0013](architecture/adr/0013-plataforma-de-ia.md) | Provedor de IA trocável, orçamento, avaliação humana e memória indexada |

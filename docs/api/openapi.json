@@ -953,6 +953,60 @@
         }
       }
     },
+    "/api/incidents/{incident_id}/rating": {
+      "post": {
+        "tags": [
+          "incidentes"
+        ],
+        "summary": "Avaliar o diagnóstico (certo/errado)",
+        "operationId": "rate_rca_api_incidents__incident_id__rating_post",
+        "parameters": [
+          {
+            "name": "incident_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Incident Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Rating"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Rate Rca Api Incidents  Incident Id  Rating Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/agents/approve/{incident_id}": {
       "post": {
         "tags": [
@@ -1308,6 +1362,53 @@
         }
       }
     },
+    "/api/ai/usage": {
+      "get": {
+        "tags": [
+          "governança"
+        ],
+        "summary": "Consumo de IA: chamadas, tokens, custo estimado e orçamento",
+        "operationId": "ai_usage_api_ai_usage_get",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 90,
+              "minimum": 1,
+              "default": 30,
+              "title": "Days"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Ai Usage Api Ai Usage Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/clusters/{cluster_id}/status": {
       "get": {
         "tags": [
@@ -1414,9 +1515,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "additionalProperties": {
-                      "type": "string"
-                    }
+                    "additionalProperties": true
                   },
                   "title": "Response Brain Search Api Brain Search Get"
                 }
@@ -2368,6 +2467,25 @@
           "enabled"
         ],
         "title": "PolicyPatch"
+      },
+      "Rating": {
+        "properties": {
+          "correct": {
+            "type": "boolean",
+            "title": "Correct"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 600,
+            "title": "Note",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "correct"
+        ],
+        "title": "Rating"
       },
       "ScopeIn": {
         "properties": {

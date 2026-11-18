@@ -31,7 +31,7 @@ from db import engine as db_engine
 from db import repository as repo
 from domain.permissions import Principal
 from identity import service as identity
-from integrations import observability, obsidian
+from integrations import brain_index, observability, obsidian
 from integrations.github_itsm import github_configured
 from integrations.hermes_client import hermes
 from k8s.client import k8s
@@ -112,6 +112,7 @@ async def lifespan(_: FastAPI):
         asyncio.create_task(orchestrator.consume_detections()),
         asyncio.create_task(mcp_server.serve()),
         asyncio.create_task(orchestrator.escalation_loop()),
+        asyncio.create_task(brain_index.sync_loop()),
     ]
     log.info(
         "Hermes Sentinel no ar · gateway=%s · kubeconfig=%s", settings.hermes_gateway_url, settings.kubeconfig_path

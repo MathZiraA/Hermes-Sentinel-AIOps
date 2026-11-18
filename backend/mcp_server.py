@@ -26,7 +26,7 @@ from mcp.server.transport_security import TransportSecuritySettings
 
 from config import settings
 from domain import actions as catalog
-from integrations import brain, observability, obsidian
+from integrations import brain, brain_index, observability, obsidian
 from integrations.hermes_client import redact, tail_lines
 from k8s.client import k8s
 
@@ -326,7 +326,7 @@ async def memoria_buscar(ctx: Context, consulta: str, limite: int = 5) -> list[d
     """Busca no Hermes Brain (incidentes, padrões, serviços, lições humanas, runbooks, diários dos bots).
     Use ANTES de concluir: talvez o time já tenha visto isso."""
     _authorize(ctx, "memoria_buscar")
-    hits = await asyncio.to_thread(brain.search, str(consulta)[:200], max(1, min(int(limite or 5), 10)))
+    hits = await brain_index.search(str(consulta)[:200], max(1, min(int(limite or 5), 10)))
     return [{**h, "trecho": redact(h["trecho"])} for h in hits]
 
 

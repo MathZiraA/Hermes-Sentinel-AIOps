@@ -299,11 +299,19 @@ async def summary(
     mttr = [m for i in items if (m := minutes(i.detectedAt, i.resolvedAt)) is not None]
     by: dict[str, dict[str, int]] = {"sev": {}, "status": {}, "service": {}, "type": {}}
     decisions = {"approved": 0, "rejected": 0}
+    rated = correct = 0
+    by_source: dict[str, int] = {}
     for i in items:
         for key, value in (("sev", i.sev), ("status", i.status), ("service", i.deployment or i.pod), ("type", i.type)):
             by[key][value] = by[key].get(value, 0) + 1
         if i.decision in decisions:
             decisions[i.decision] += 1
+        if i.rcaRating:
+            rated += 1
+            correct += bool(i.rcaRating.get("correct"))
+        src = (i.rca or {}).get("source")
+        if src:
+            by_source[src] = by_source.get(src, 0) + 1
     avg = lambda xs: round(sum(xs) / len(xs), 1) if xs else None  # noqa: E731
     return {
         "periodDays": days,
@@ -316,4 +324,10 @@ async def summary(
         "byService": dict(sorted(by["service"].items(), key=lambda kv: -kv[1])[:10]),
         "byType": dict(sorted(by["type"].items(), key=lambda kv: -kv[1])[:10]),
         "decisions": decisions,
+        "rca": {
+            "rated": rated,
+            "correct": correct,
+            "accuracy": round(correct / rated, 3) if rated else None,
+            "bySource": by_source,
+        },
     }

@@ -375,12 +375,20 @@ def write_lesson(inc: Any, decision: str, reason: str) -> Path | None:
         target = inc.deployment or inc.pod
         verb = "aprovou" if decision == "approved" else "rejeitou"
         action = inc.approval.action if inc.approval else "-"
-        title = safe_title(f"Licao - {verb} {action} em {target} ({inc.type})", 100)
+        if decision == "rca_wrong":
+            title = safe_title(f"Licao - diagnostico errado em {target} ({inc.type})", 100)
+        else:
+            title = safe_title(f"Licao - {verb} {action} em {target} ({inc.type})", 100)
         path = root() / LESSONS / f"{title}.md"
         n = 2
         while path.exists():
             path = root() / LESSONS / f"{title} {n}.md"
             n += 1
+        headline = (
+            "O operador corrigiu o diagnóstico do Investigator."
+            if decision == "rca_wrong"
+            else f"O operador {verb} `{inc.approval.command if inc.approval else action}`."
+        )
         _write_new(
             path,
             _frontmatter(
@@ -389,7 +397,7 @@ def write_lesson(inc: Any, decision: str, reason: str) -> Path | None:
             + f"""
 # {path.stem}
 
-**O operador {verb} `{inc.approval.command if inc.approval else action}`.**
+**{headline}**
 
 > {reason}
 

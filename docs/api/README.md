@@ -58,6 +58,8 @@ exige uma permissão do papel (tabela abaixo) e filtra pelo escopo dos times do 
 | `GET` | `/api/audit/export?format=json\|csv` | Exporta a auditoria completa |
 | `GET` | `/api/reports/summary?days=30` | MTTA, MTTR, volume por SEV, status, serviço e tipo, e decisões |
 | `GET` | `/api/clusters` | Clusters conhecidos e incidentes abertos em cada um |
+| `POST` | `/api/incidents/{id}/rating` | `{"correct": bool, "note"}`: avaliação humana do diagnóstico (nota obrigatória se errado) |
+| `GET` | `/api/ai/usage?days=30` | Provedor, orçamento, chamadas e tokens por dia, bloqueios e custo estimado |
 | `GET` | `/api/clusters/{id}/status` | Nós, workloads, pods saudáveis e estado do Monitor |
 | `GET` | `/api/brain/graph` | Notas e wikilinks do Hermes Brain (para o grafo) |
 | `GET` | `/api/brain/search?q=` | Busca na memória |
