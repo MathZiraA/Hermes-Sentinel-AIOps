@@ -7,7 +7,6 @@ import {
   Cloud,
   FlaskConical,
   Github,
-  LogOut,
   MessagesSquare,
   Server,
   ShieldAlert,
@@ -179,30 +178,6 @@ function ApprovalBanner({ req }: { req: ApprovalRequest }) {
   );
 }
 
-function UserBadge() {
-  const { user, logout } = useAuth();
-  if (!user) return null;
-  return (
-    <div className="mt-4 flex items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2">
-      <div className="min-w-0">
-        <p className="truncate text-[12px] font-semibold text-foreground">{user.name}</p>
-        <p className="truncate text-[10.5px] text-muted-foreground">
-          {user.roleLabel} · {user.email}
-        </p>
-      </div>
-      <button
-        type="button"
-        onClick={() => void logout()}
-        className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
-        aria-label="Sair"
-        title="Sair"
-      >
-        <LogOut className="h-4 w-4" />
-      </button>
-    </div>
-  );
-}
-
 export function SystemSidebar() {
   const { connection, agents, health, approvals, events } = useTelemetry();
   const { can } = useAuth();
@@ -240,7 +215,6 @@ export function SystemSidebar() {
         <h1 className="text-[11px] font-bold uppercase tracking-[0.28em] text-foreground">
           Hermes Sentinel
         </h1>
-        <UserBadge />
         <div className="mt-5 flex items-baseline justify-between">
           <p className="text-[15px] font-semibold text-foreground">
             5 agentes · {busyAgents ? `${busyAgents} em ação` : "vigiando"}
@@ -292,7 +266,7 @@ export function SystemSidebar() {
             item={health.hermesGateway}
             live={live}
           />
-          <HealthRow icon={BookOpen} label="Obsidian Vault" item={health.obsidian} live={live} />
+          <HealthRow icon={BookOpen} label="Hermes Brain" item={health.obsidian} live={live} />
           <HealthRow icon={Github} label="GitHub Issues" item={health.github} live={live} />
         </div>
       </section>
