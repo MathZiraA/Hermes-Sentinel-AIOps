@@ -10,7 +10,9 @@ from datetime import datetime
 
 from agents.base import executor, investigator, itsm, monitor, supervisor
 from config import settings
+from core import telemetry
 from core.bus import bus
+from db import cluster_agents
 from db import operations as ops
 from db import repository as repo
 from domain import actions as catalog
@@ -18,6 +20,7 @@ from domain.lifecycle import OPEN, check_transition, severity_for
 from integrations import brain, notify, observability, obsidian
 from integrations.github_itsm import create_issue, github_configured
 from integrations.hermes_client import hermes, tail_lines
+from k8s import remediation
 from k8s.client import K8sUnavailable, k8s
 from k8s.watcher import Detection, watcher
 from mcp_server import tool_calls as mcp_tool_calls
@@ -122,11 +125,14 @@ class Orchestrator:
         if new in ("resolved", "closed", "failed") and not inc.resolvedAt:
             inc.resolvedAt = now_iso()
         if old != new:
+            telemetry.TRANSITIONS.labels(new).inc()
             await self._mark(inc, f"status: {old} → {new}", actor=actor, kind="status")
         await self._save(inc)
 
     async def _register(self, inc: Incident) -> None:
         """Primeira gravação: cluster, severidade e cache em memória."""
+        if inc.id not in self.incidents:
+            telemetry.INCIDENTS.labels(inc.type, inc.sev, inc.source).inc()
         inc.cluster = inc.cluster if inc.cluster != "local" else settings.cluster_id
         if inc.source != "zabbix":  # alertas externos trazem a severidade da origem
             inc.sev = severity_for(inc.type, inc.severity)
@@ -140,10 +146,16 @@ class Orchestrator:
         ]
 
     # ------------------------------------------------------------------ entrada: watcher real
-    def _open_for(self, namespace: str, target: str) -> Incident | None:
+    def _open_for(self, namespace: str, target: str, cluster: str | None = None) -> Incident | None:
         """Incidente ainda aberto para o mesmo workload: sinais novos se juntam a ele (1 incidente, não 5)."""
+        cluster = cluster or settings.cluster_id
         for inc in reversed(list(self.incidents.values())):
-            if inc.namespace == namespace and (inc.deployment or inc.pod) == target and inc.status in OPEN:
+            if (
+                inc.cluster == cluster
+                and inc.namespace == namespace
+                and (inc.deployment or inc.pod) == target
+                and inc.status in OPEN
+            ):
                 return inc
         return None
 
@@ -178,6 +190,7 @@ class Orchestrator:
             target = deployment or det.pod
             silence = await ops.active_silence(settings.cluster_id, det.namespace, target, det.type)
             if silence:
+                telemetry.DETECTIONS.labels(det.type, "silenced").inc()
                 log.info("sinal silenciado (%s): %s em %s/%s", silence["reason"][:40], det.type, det.namespace, target)
                 continue
             existing = self._open_for(det.namespace, target)
@@ -510,6 +523,7 @@ class Orchestrator:
         if actor != "sistema" and inc.proposedBy == actor:
             raise PermissionError("quem propôs a correção não pode decidir sobre ela (separação de deveres)")
         inc.decision = decision  # type: ignore[assignment]
+        telemetry.DECISIONS.labels(decision, str(actor.startswith("politica:")).lower()).inc()
         inc.decisionBy, inc.decisionReason, inc.decidedAt = actor, (reason.strip() or None), now_iso()
 
     async def acknowledge(self, incident_id: str, actor: str) -> Incident:
@@ -560,26 +574,12 @@ class Orchestrator:
         return inc
 
     async def _apply(self, inc: Incident) -> str:
-        """Executa a ação aprovada no cluster (síncrono → thread)."""
+        """Executa a ação aprovada no cluster local (síncrono → thread)."""
         a = inc.approval
         assert a is not None  # noqa: S101 (garantido por _execute)
-        ns, name, p = inc.namespace, inc.deployment or inc.pod, a.params
-        handlers = {
-            "rollout_restart": lambda: k8s.rollout_restart(ns, name),
-            "scale": lambda: k8s.scale(ns, name, int(p["replicas"])),
-            "delete_pod": lambda: k8s.delete_pod(ns, inc.pod),
-            "rollout_undo": lambda: k8s.rollout_undo(ns, name),
-            "set_resources": lambda: k8s.set_resources(
-                ns,
-                name,
-                p["container"],
-                {k.split("_")[0]: v for k, v in p.items() if k in ("memory_limit", "cpu_limit")},
-            ),
-            "cordon": lambda: k8s.cordon(name),
-            "drain": lambda: k8s.drain(name),
-            "rerun_job": lambda: k8s.rerun_job(ns, name),
-        }
-        return await asyncio.to_thread(handlers[a.action])
+        return await asyncio.to_thread(
+            remediation.apply, a.action, a.params, inc.namespace, inc.deployment or inc.pod, inc.pod
+        )
 
     async def _execute(self, inc: Incident) -> None:
         if inc.approval is None:  # nunca deveria acontecer: approve() exige um pedido pendente
@@ -601,8 +601,28 @@ class Orchestrator:
             elif inc.simulated:
                 result = f"[simulação] {a.command}: OK (cluster real não foi alterado)"
                 await self._set_status(inc, "resolved")
+            elif inc.cluster != settings.cluster_id:
+                cmd_id = await cluster_agents.enqueue(
+                    inc.cluster,
+                    inc.id,
+                    a.action,
+                    a.params,
+                    namespace=inc.namespace,
+                    workload=inc.deployment or inc.pod,
+                    pod=inc.pod,
+                    resource_kind=inc.resourceKind,
+                )
+                inc.remediationResult = f"enviado ao agente do cluster {inc.cluster} (comando {cmd_id[:8]})"
+                await self._mark(inc, inc.remediationResult)
+                await self._save(inc)
+                await executor.emit(
+                    "executing", f"Correção enviada ao agente de {inc.cluster}.", incident_id=inc.id, log=a.command
+                )
+                await executor.go_home()
+                return  # o agente executa, verifica e responde em agent_result()
             else:
                 result = await self._apply(inc)
+                telemetry.REMEDIATIONS.labels(a.action, "applied").inc()
                 await self._set_status(inc, "monitoring")
                 verify = True
             inc.remediationResult = result
@@ -615,6 +635,7 @@ class Orchestrator:
             )
         except (K8sUnavailable, Exception) as exc:
             inc.remediationResult = f"falhou: {exc}"
+            telemetry.REMEDIATIONS.labels(a.action, "error").inc()
             await self._set_status(inc, "failed")
             await self._mark(inc, f"Executor falhou: {exc}")
             await executor.emit(
@@ -631,15 +652,7 @@ class Orchestrator:
     # ------------------------------------------------------------------ verificação pós-correção
     async def _verify(self, inc: Incident) -> None:
         """Depois de aplicar, confere se o alvo ficou saudável. Se não ficou, reabre (uma vez) ou falha."""
-        kind = (
-            "node"
-            if inc.resourceKind == "Node"
-            else (
-                "job"
-                if (inc.approval and inc.approval.action == "rerun_job")
-                else (inc.resourceKind.lower() if inc.resourceKind in ("StatefulSet", "Deployment") else "deployment")
-            )
-        )
+        kind = remediation.health_kind(inc.resourceKind, inc.approval.action if inc.approval else "")
         target = inc.deployment or inc.pod
         await asyncio.sleep(settings.verify_delay_seconds)
         ok, detail = False, "não verificado"
@@ -652,6 +665,10 @@ class Orchestrator:
             if ok:
                 break
             await asyncio.sleep(settings.verify_interval_seconds)
+        await self._conclude(inc, ok, detail)
+
+    async def _conclude(self, inc: Incident, ok: bool, detail: str) -> None:
+        """Resultado da verificação (local ou vinda do agente): resolve, reabre uma vez ou falha."""
         if ok:
             await self._set_status(inc, "resolved")
             await notify.notify("resolved", inc, f"Resolvido e verificado: {detail}")
@@ -746,6 +763,69 @@ class Orchestrator:
         inc.sev = sev  # type: ignore[assignment]
         self._spawn(self.run_incident(inc, use_ai=True))
         return inc
+
+    # ------------------------------------------------------------------ multicluster: agentes remotos
+    async def ingest_remote(self, cluster_id: str, d: dict) -> Incident | None:
+        """Sinal vindo do agente de um cluster remoto (já com logs, describe e deploy recente)."""
+        target = d.get("owner") or d["pod"]
+        silence = await ops.active_silence(cluster_id, d["namespace"], target, d["type"])
+        if silence:
+            telemetry.DETECTIONS.labels(d["type"], "silenced").inc()
+            return None
+        existing = self._open_for(d["namespace"], target, cluster_id)
+        if existing:
+            signal = f"{d['type']} em {d['kind']}/{d['pod']}: {d['reason']}"
+            if signal not in existing.related:
+                existing.related.append(signal)
+                await self._mark(existing, f"Sinal correlacionado: {signal}", actor=f"agente:{cluster_id}")
+            return existing
+        inc = Incident(
+            id=_new_id(),
+            cluster=cluster_id,
+            type=d["type"],
+            namespace=d["namespace"],
+            pod=d["pod"],
+            container=d.get("container") or None,
+            deployment=d.get("owner") or None,
+            reason=d["reason"][:300],
+            resourceKind=d.get("kind") or "Pod",
+            severity=d.get("severity") or "alta",
+            logs=tail_lines(d.get("logs") or ""),
+            events=(d.get("events") or "")[:8000],
+            rollout=d.get("rollout"),
+            source="agent",
+        )
+        self._spawn(self.run_incident(inc, use_ai=True))
+        return inc
+
+    async def agent_result(self, cluster_id: str, command_id: str, result: dict) -> bool:
+        """O agente executou (e verificou) a correção: conclui o incidente."""
+        cmd = await cluster_agents.complete(cluster_id, command_id, result)
+        if cmd is None:
+            return False
+        inc = self.incidents.get(cmd.incident_id)
+        if inc is None:
+            found = await repo.get_incident(cmd.incident_id)
+            if not found:
+                return True
+            inc = found[0]
+            self.incidents[inc.id] = inc
+        if not result.get("ok"):
+            inc.remediationResult = f"falhou no agente: {result.get('error') or '?'}"
+            telemetry.REMEDIATIONS.labels(cmd.action, "error").inc()
+            await self._set_status(inc, "failed")
+            await self._mark(inc, inc.remediationResult, actor=f"agente:{cluster_id}")
+            await notify.notify("failed", inc, inc.remediationResult)
+            await self._close(inc)
+            return True
+        telemetry.REMEDIATIONS.labels(cmd.action, "applied").inc()
+        inc.remediationResult = str(result.get("result") or "aplicado")[:500]
+        await self._mark(inc, f"Agente de {cluster_id}: {inc.remediationResult}", actor=f"agente:{cluster_id}")
+        await self._set_status(inc, "monitoring")
+        detail = str(result.get("detail") or "")
+        await self._mark(inc, f"Verificação no agente: {detail}", kind="verify", actor=f"agente:{cluster_id}")
+        await self._conclude(inc, bool(result.get("healthy")), detail)
+        return True
 
     # ------------------------------------------------------------------ plantão e escalonamento
     async def escalate(self, inc: Incident, level: int) -> None:
