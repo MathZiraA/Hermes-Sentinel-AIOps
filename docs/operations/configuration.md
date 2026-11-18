@@ -73,6 +73,19 @@ Gere tokens com `openssl rand -hex 32`. Permissões de cada papel: [docs/api](..
 | `OIDC_ALLOWED_DOMAINS` | — | Domínios de e-mail aceitos, separados por vírgula |
 | `FRONTEND_URL` | `http://localhost:3000` | Para onde o SSO volta depois do login |
 
+## Integrações
+
+Guia passo a passo em [integrations.md](integrations.md).
+
+| Variável | Descrição |
+|---|---|
+| `JIRA_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`, `JIRA_PROJECT_KEY` | Jira Cloud: um ticket por incidente |
+| `JIRA_ISSUE_TYPE` / `JIRA_DONE_TRANSITION` / `JIRA_INCLUDE_SIMULATED` | Tipo da issue (`Task`), transição de fechamento (`Done`), abrir ticket para simulados (`false`) |
+| `ZABBIX_WEBHOOK_TOKEN` | Token do webhook `/api/integrations/zabbix` |
+| `GRAFANA_URL` / `GRAFANA_DASHBOARD_UID` | Link do painel em cada incidente |
+| `LOKI_URL` / `LOKI_TOKEN` / `LOKI_SELECTOR` | Logs centralizados no incidente e na ferramenta MCP `buscar_logs_loki` |
+| `GITHUB_DEPLOY_REPOS` | `workload=org/repo,…`: commits do deploy correlacionado |
+
 ## Memória e integrações
 
 | Variável | Padrão | Descrição |

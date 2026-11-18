@@ -75,6 +75,15 @@ exige uma permissão do papel (tabela abaixo) e filtra pelo escopo dos times do 
 | `GET` · `POST` | `/api/oncall` | leitura · Admin | Turnos de plantão (`{"teamId", "user", "level": 1\|2, "startsAt", "endsAt"}`) |
 | `DELETE` | `/api/oncall/{id}` | Admin | Remove um turno |
 
+### Integrações
+
+| Método | Rota | Descrição |
+|---|---|---|
+| `GET` | `/api/integrations` | Estado de Jira, Zabbix, Grafana, Loki e GitHub |
+| `POST` | `/api/integrations/zabbix` | Webhook do Zabbix (`Authorization: Bearer <ZABBIX_WEBHOOK_TOKEN>`); `PROBLEM` abre, `RESOLVED` registra a recuperação |
+
+Cada incidente traz `links` (`grafana`, `logs`, `ticket`, `source`) e, se houver, `ticket` (`{"system", "key", "url"}`).
+
 ### Ações de correção
 
 | Ação | Risco | Automática? | Comando |
@@ -144,6 +153,7 @@ Endpoint `http://127.0.0.1:8765/mcp` (Streamable HTTP), com `Authorization: Bear
 | `descrever_recurso` | deployment, statefulset, daemonset, job, cronjob, pvc, service, hpa, configmap (só as chaves) | | ✅ | ✅ | |
 | `descrever_no` | Condições, capacidade, taints e uso do nó | | ✅ | ✅ | |
 | `uso_recursos` | Uso real vs. limite por container | | ✅ | ✅ | |
+| `buscar_logs_loki` | Logs centralizados do workload (se o Loki estiver configurado) | | ✅ | ✅ | |
 | `consultar_runbook` | Runbooks oficiais do tipo de falha | | ✅ | ✅ | ✅ |
 | `runbook_rascunho` | Rascunho de runbook (exige revisão humana) | | ✅ | ✅ | ✅ |
 | `propor_correcao` | Cria um pedido de aprovação; **não executa nada**. Ações: `rollout_restart`, `scale`, `rollout_undo`, `set_resources`, `none` | | | ✅ | |

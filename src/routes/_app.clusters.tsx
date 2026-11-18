@@ -18,6 +18,11 @@ const INTEGRATIONS: { key: string; label: string }[] = [
   { key: "database", label: "Banco de dados" },
   { key: "obsidian", label: "Hermes Brain" },
   { key: "github", label: "GitHub" },
+  { key: "jira", label: "Jira" },
+  { key: "zabbix", label: "Zabbix" },
+  { key: "grafana", label: "Grafana" },
+  { key: "loki", label: "Loki" },
+  { key: "githubDeploys", label: "GitHub (deploys)" },
 ];
 
 function Dot({ ok }: { ok: boolean }) {
@@ -134,7 +139,9 @@ function Clusters() {
       <Panel title={t("clusters.integrations")} className="mt-6">
         <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {INTEGRATIONS.map(({ key, label }) => {
-            const item = health.data?.[key] as HealthCheck | undefined;
+            const item = (health.data?.[key] ??
+              (health.data?.["integrations"] as Record<string, HealthCheck> | undefined)?.[key]) as
+              HealthCheck | undefined;
             return (
               <li
                 key={key}

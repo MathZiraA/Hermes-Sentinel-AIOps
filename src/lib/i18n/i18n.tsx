@@ -196,6 +196,12 @@ const pt = {
   "incident.rollout": "Deploy recente",
   "incident.reopened": "Reaberto: a primeira correção não resolveu",
   "incident.auto": "Corrigido por autorremediação",
+  "incident.links": "Links",
+  "incident.commits": "Commits do deploy",
+  "link.grafana": "Painel no Grafana",
+  "link.logs": "Logs no Loki",
+  "link.ticket": "Ticket",
+  "link.source": "Alerta de origem",
   "warRoom.title": "Sala de guerra",
 };
 
@@ -389,6 +395,12 @@ const en: Dict = {
   "incident.rollout": "Recent deploy",
   "incident.reopened": "Reopened: the first fix did not work",
   "incident.auto": "Fixed by auto-remediation",
+  "incident.links": "Links",
+  "incident.commits": "Deploy commits",
+  "link.grafana": "Grafana dashboard",
+  "link.logs": "Logs in Loki",
+  "link.ticket": "Ticket",
+  "link.source": "Source alert",
   "warRoom.title": "War room",
 };
 

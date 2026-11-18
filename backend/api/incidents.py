@@ -13,6 +13,7 @@ from config import settings
 from db import repository as repo
 from domain.lifecycle import STATUS_LABEL, SlaPolicy
 from domain.permissions import Principal
+from integrations import observability
 from schemas.events import DecisionRequest, Incident
 
 router = APIRouter(prefix="/api", tags=["incidentes"])
@@ -31,6 +32,16 @@ def summary_of(inc: Incident) -> dict[str, Any]:
     data = inc.model_dump(exclude={"logs", "events", "memory"})
     detected = _parse(inc.detectedAt) or datetime.now(UTC)
     data["statusLabel"] = STATUS_LABEL.get(inc.status, inc.status)
+    data["links"] = {
+        k: v
+        for k, v in {
+            "grafana": observability.grafana_link(inc),
+            "logs": observability.loki_explore_link(inc),
+            "ticket": (inc.ticket or {}).get("url"),
+            "source": (inc.external or {}).get("event_url") or None,
+        }.items()
+        if v
+    }
     data["sla"] = sla.evaluate(inc.sev, detected, _parse(inc.acknowledgedAt), _parse(inc.resolvedAt), datetime.now(UTC))
     return data
 

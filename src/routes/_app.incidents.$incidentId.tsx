@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Check, Hand, Loader2, ShieldAlert, X } from "lucide-react";
+import { ArrowLeft, Check, ExternalLink, Hand, Loader2, ShieldAlert, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { SevBadge, SlaBadge, StatusBadge } from "@/components/incidents/badges";
 import { Panel, StateMessage } from "@/components/layout/PageHeader";
@@ -188,6 +188,28 @@ function IncidentPage() {
               {inc.rollout.previousImages.join(", ") || "?"} → {inc.rollout.images.join(", ")})
             </p>
           )}
+          {!!inc.rollout?.commits?.length && (
+            <div className="rounded-lg border border-border bg-card px-3 py-2 text-sm">
+              <p className="mb-1 text-xs font-medium text-muted-foreground">
+                {t("incident.commits")}
+              </p>
+              <ul className="space-y-0.5">
+                {inc.rollout.commits.map((c) => (
+                  <li key={c.sha} className="truncate">
+                    <a
+                      href={c.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-mono text-xs text-primary hover:underline"
+                    >
+                      {c.sha}
+                    </a>{" "}
+                    {c.message} <span className="text-xs text-muted-foreground">· {c.author}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           {inc.reopenCount > 0 && (
             <p className="rounded-lg border border-sev2/40 bg-sev2/10 px-3 py-2 text-sm">
               {t("incident.reopened")}
@@ -301,6 +323,28 @@ function IncidentPage() {
               )}
             </dl>
           </Panel>
+          {Object.keys(inc.links).length > 0 && (
+            <Panel title={t("incident.links")}>
+              <ul className="space-y-1.5 text-sm">
+                {(["ticket", "grafana", "logs", "source"] as const).map((k) =>
+                  inc.links[k] ? (
+                    <li key={k}>
+                      <a
+                        href={inc.links[k]}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 text-primary hover:underline"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                        {t(`link.${k}`)}
+                        {k === "ticket" && inc.ticket ? ` ${inc.ticket.key}` : ""}
+                      </a>
+                    </li>
+                  ) : null,
+                )}
+              </ul>
+            </Panel>
+          )}
           {!!inc.related.length && (
             <Panel title={t("incident.related")}>
               <ul className="space-y-1.5 text-xs text-muted-foreground">

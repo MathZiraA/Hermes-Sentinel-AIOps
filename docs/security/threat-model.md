@@ -44,6 +44,8 @@ flowchart LR
 | T13 | Adivinhar senhas | Spoofing | argon2id, política de senha, bloqueio após 5 falhas, falhas auditadas, 2FA opcional | Bloqueio compartilhado entre réplicas |
 | T14 | Requisição forjada a partir de outro site (CSRF) | Adulteração | `SameSite=Lax` e recusa de escritas de origens fora de `CORS_ORIGINS` | — |
 | T9 | Correção em loop agrava o incidente | DoS | Dedupe de 10 min, correlação por workload, parâmetros validados (réplicas 1–5, limites de recurso com teto), verificação pós-correção que reabre só uma vez | — |
+| T16 | Alerta forjado no webhook do Zabbix abre incidentes falsos | Spoofing | Token próprio comparado em tempo constante, deduplicação por `event_id`, auditoria de cada evento; um alerta nunca altera o cluster sozinho | Assinatura HMAC do corpo |
+| T17 | Credenciais de integração vazam | Divulgação | Só em variáveis de ambiente; nunca nos logs, na API ou no frontend | Cofre de segredos (Vault/External Secrets) na Fase 7 |
 | T15 | Autorremediação mal configurada altera o cluster sem ninguém ver | Elevação | Só ações de baixo risco, só por política de Admin (tipo + escopo), limite por hora, auditoria `politica:<id>`, nunca para incidente simulado | Aprovação em duas etapas para criar políticas |
 | T10 | Dependência vulnerável | Vários | `pip-audit` e Dependabot no CI | — |
 | T11 | Segredo commitado | Divulgação | `.gitignore` estrito, gitleaks no CI e no pre-commit | — |

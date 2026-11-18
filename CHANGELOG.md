@@ -54,6 +54,13 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
 - **Correlação com deploys**: incidentes logo após um rollout mostram a revisão e a troca de imagem.
 - Tela **Manutenção e plantão** e, no incidente, responsáveis, escalonamento, deploy recente e reaberturas.
 
+- **Jira**: um ticket por incidente, com prioridade pela severidade, atribuição ao plantão com menção, comentários
+  em cada etapa e fechamento automático.
+- **Zabbix**: webhook autenticado que transforma alertas em incidentes, com deduplicação e recuperação.
+- **Grafana** (link do painel no intervalo do incidente), **Loki** (logs centralizados no incidente e ferramenta MCP
+  `buscar_logs_loki`) e **GitHub** (commits do deploy correlacionado).
+- Links externos no detalhe do incidente e estado das integrações na tela de Clusters.
+
 ### Segurança
 
 - Logs e eventos tratados como dados não confiáveis, com redação de segredos antes de qualquer envio.
