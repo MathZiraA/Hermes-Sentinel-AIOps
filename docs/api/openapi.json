@@ -1951,6 +1951,84 @@
         }
       }
     },
+    "/api/integrations": {
+      "get": {
+        "tags": [
+          "integrações"
+        ],
+        "summary": "Estado das integrações",
+        "operationId": "integrations_status_api_integrations_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Integrations Status Api Integrations Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/integrations/zabbix": {
+      "post": {
+        "tags": [
+          "integrações"
+        ],
+        "summary": "Webhook do Zabbix: alertas viram incidentes",
+        "operationId": "zabbix_webhook_api_integrations_zabbix_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ZabbixEvent"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Zabbix Webhook Api Integrations Zabbix Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/healthz": {
       "get": {
         "tags": [
@@ -2567,6 +2645,69 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "ZabbixEvent": {
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "maxLength": 64,
+            "title": "Event Id"
+          },
+          "status": {
+            "type": "string",
+            "maxLength": 16,
+            "title": "Status",
+            "default": "PROBLEM"
+          },
+          "host": {
+            "type": "string",
+            "maxLength": 253,
+            "title": "Host"
+          },
+          "trigger": {
+            "type": "string",
+            "maxLength": 255,
+            "title": "Trigger"
+          },
+          "severity": {
+            "type": "string",
+            "maxLength": 32,
+            "title": "Severity",
+            "default": "Average"
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 4000,
+            "title": "Message",
+            "default": ""
+          },
+          "namespace": {
+            "type": "string",
+            "maxLength": 63,
+            "title": "Namespace",
+            "default": ""
+          },
+          "workload": {
+            "type": "string",
+            "maxLength": 253,
+            "title": "Workload",
+            "default": ""
+          },
+          "event_url": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Event Url",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "event_id",
+          "host",
+          "trigger"
+        ],
+        "title": "ZabbixEvent",
+        "description": "Corpo enviado pelo media type webhook do Zabbix (ver docs/operations/integrations.md)."
       }
     }
   }

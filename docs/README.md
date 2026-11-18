@@ -5,6 +5,7 @@
 | Entender o sistema | [Arquitetura](architecture/overview.md) · [Decisões (ADRs)](architecture/adr/) |
 | Instalar e configurar | [Instalação](operations/installation.md) · [Configuração](operations/configuration.md) |
 | Montar a demonstração com o Hermes | [Ambiente de demonstração](operations/demo-environment.md) |
+| Ligar Jira, Zabbix, Grafana, Loki e GitHub | [Integrações](operations/integrations.md) |
 | Usar no dia a dia | [Manual do usuário](user-guide/README.md) |
 | Integrar | [API REST, WebSocket e MCP](api/README.md) · [OpenAPI](api/openapi.json) |
 | Avaliar a segurança | [Modelo de ameaças](security/threat-model.md) · [Política de segurança](../SECURITY.md) |
@@ -25,3 +26,4 @@
 | [0009](architecture/adr/0009-identidade-e-acesso.md) | Identidade: sessões no servidor, RBAC com escopo por time, 2FA e OIDC |
 | [0010](architecture/adr/0010-interface-profissional.md) | Interface profissional com painel principal e sala de guerra |
 | [0011](architecture/adr/0011-operacao.md) | Operação: ações, verificação, silêncios, autorremediação e plantão |
+| [0012](architecture/adr/0012-integracoes.md) | Integrações por canais e enriquecimento opcional |
