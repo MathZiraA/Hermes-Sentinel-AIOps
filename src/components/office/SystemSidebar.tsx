@@ -7,6 +7,7 @@ import {
   Cloud,
   FlaskConical,
   Github,
+  LogOut,
   MessagesSquare,
   Server,
   ShieldAlert,
@@ -14,6 +15,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { sentinelApi, useKanbanCards, useTelemetry } from "@/lib/sentinel/telemetry";
+import { useAuth } from "@/lib/auth/auth";
 import {
   KANBAN_COLUMNS,
   type ApprovalRequest,
@@ -84,15 +86,22 @@ function HealthRow({
 }
 
 function ApprovalBanner({ req }: { req: ApprovalRequest }) {
+  const { can } = useAuth();
+  const allowed = can("incidents:decide");
   const [busy, setBusy] = useState<"approve" | "reject" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [reason, setReason] = useState("");
   const act = async (kind: "approve" | "reject") => {
+    if (kind === "reject" && !reason.trim()) {
+      setError("Escreva o motivo da rejeição: ele vira uma lição para o time.");
+      return;
+    }
     setBusy(kind);
     setError(null);
     try {
       await (kind === "approve"
-        ? sentinelApi.approve(req.incidentId)
-        : sentinelApi.reject(req.incidentId));
+        ? sentinelApi.approve(req.incidentId, reason)
+        : sentinelApi.reject(req.incidentId, reason));
     } catch (e) {
       setError((e as Error).message);
       setBusy(null);
@@ -124,10 +133,30 @@ function ApprovalBanner({ req }: { req: ApprovalRequest }) {
           {req.description}
         </p>
       )}
+      {allowed ? (
+        <>
+          <label htmlFor={`motivo-${req.incidentId}`} className="sr-only">
+            Motivo da decisão
+          </label>
+          <textarea
+            id={`motivo-${req.incidentId}`}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            maxLength={600}
+            rows={2}
+            placeholder="Motivo (obrigatório para rejeitar; vira lição para o time)"
+            className="mt-2 w-full resize-none rounded-md border border-border bg-card px-2 py-1.5 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+        </>
+      ) : (
+        <p className="mt-2 text-[10.5px] text-muted-foreground">
+          Seu papel permite acompanhar, mas não decidir esta correção.
+        </p>
+      )}
       <div className="mt-2.5 grid grid-cols-2 gap-2">
         <button
           type="button"
-          disabled={!!busy}
+          disabled={!!busy || !allowed}
           onClick={() => act("reject")}
           className={cn(BTN, "border border-border bg-card text-foreground hover:bg-accent")}
         >
@@ -135,7 +164,7 @@ function ApprovalBanner({ req }: { req: ApprovalRequest }) {
         </button>
         <button
           type="button"
-          disabled={!!busy}
+          disabled={!!busy || !allowed}
           onClick={() => act("approve")}
           className={cn(
             BTN,
@@ -150,8 +179,33 @@ function ApprovalBanner({ req }: { req: ApprovalRequest }) {
   );
 }
 
+function UserBadge() {
+  const { user, logout } = useAuth();
+  if (!user) return null;
+  return (
+    <div className="mt-4 flex items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2">
+      <div className="min-w-0">
+        <p className="truncate text-[12px] font-semibold text-foreground">{user.name}</p>
+        <p className="truncate text-[10.5px] text-muted-foreground">
+          {user.roleLabel} · {user.email}
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={() => void logout()}
+        className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+        aria-label="Sair"
+        title="Sair"
+      >
+        <LogOut className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
+
 export function SystemSidebar() {
   const { connection, agents, health, approvals, events } = useTelemetry();
+  const { can } = useAuth();
   const cards = useKanbanCards();
   const live = connection === "open";
   const [incidentType, setIncidentType] = useState<IncidentType>("OOMKilled");
@@ -167,7 +221,7 @@ export function SystemSidebar() {
         ? sentinelApi.testCommunication()
         : sentinelApi.simulateIncident(incidentType, useAi));
     } catch {
-      setError("Backend offline. Rode ./start.sh (porta 8000).");
+      setError("Não foi possível executar. Confira o backend (make dev) e o seu papel.");
     } finally {
       setTimeout(() => setPending(null), 1200);
     }
@@ -186,6 +240,7 @@ export function SystemSidebar() {
         <h1 className="text-[11px] font-bold uppercase tracking-[0.28em] text-foreground">
           Hermes Sentinel
         </h1>
+        <UserBadge />
         <div className="mt-5 flex items-baseline justify-between">
           <p className="text-[15px] font-semibold text-foreground">
             5 agentes · {busyAgents ? `${busyAgents} em ação` : "vigiando"}
@@ -247,7 +302,7 @@ export function SystemSidebar() {
         <div className="flex flex-col gap-2">
           <button
             type="button"
-            disabled={!live || pending === "comm"}
+            disabled={!live || pending === "comm" || !can("incidents:simulate")}
             onClick={() => run("comm")}
             className={cn(
               BTN,
@@ -297,7 +352,7 @@ export function SystemSidebar() {
             </label>
             <button
               type="button"
-              disabled={!live || pending === "sim"}
+              disabled={!live || pending === "sim" || !can("incidents:simulate")}
               onClick={() => run("sim")}
               className={cn(
                 BTN,
