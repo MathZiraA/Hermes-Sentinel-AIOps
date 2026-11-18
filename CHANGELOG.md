@@ -7,7 +7,17 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
 
 ## [Não lançado]
 
+## [1.0.0] - 2026-11-18
+
+Primeira versão estável: de demonstração a produto self-hosted.
+
 ### Adicionado
+
+- **Multicluster** por agente de saída (`python -m agent`): token por cluster, sinais enriquecidos e execução só de
+  correções aprovadas na central, com verificação.
+- **Distribuição**: imagens Docker sem root, Docker Compose com PostgreSQL e Caddy, Helm chart com RBAC de menor
+  privilégio, Ingress e ServiceMonitor; workflow de release (imagens no GHCR + chart).
+- **Observabilidade**: métricas Prometheus (`/metrics`), logs JSON e probes de liveness e readiness.
 
 - **Backend FastAPI** com WebSocket de telemetria (`/ws/telemetry`), simulação de incidentes, aprovação e rejeição.
 - **Monitor determinístico e abrangente**: watch de Pods mais varredura periódica de nós, deployments, statefulsets,
@@ -77,4 +87,5 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
 - O último administrador não pode ser rebaixado nem desativado; mudanças de acesso derrubam as sessões.
 - O leitor de notas do Hermes Brain nunca interpreta HTML (sem XSS).
 
-[Não lançado]: https://github.com/MathZiraA/Hermes-Sentinel-AIOps/commits/main
+[Não lançado]: https://github.com/MathZiraA/Hermes-Sentinel-AIOps/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/MathZiraA/Hermes-Sentinel-AIOps/releases/tag/v1.0.0

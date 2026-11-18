@@ -1,6 +1,6 @@
 [project]
 name = "hermes-sentinel-backend"
-version = "0.1.0"
+version = "1.0.0"
 description = "Hermes Sentinel: AIOps para Kubernetes com time de agentes, aprovação humana e memória em Obsidian."
 readme = "../README.md"
 license = "MIT"
