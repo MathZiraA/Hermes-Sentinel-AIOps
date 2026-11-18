@@ -63,6 +63,32 @@ exige uma permissão do papel (tabela abaixo) e filtra pelo escopo dos times do 
 | `GET` | `/api/brain/search?q=` | Busca na memória |
 | `GET` | `/api/brain/notes/{nome}` | Conteúdo de uma nota (Markdown) |
 
+### Operação
+
+| Método | Rota | Permissão | Descrição |
+|---|---|---|---|
+| `GET` | `/api/actions` | leitura | Catálogo de ações, risco e quais podem ser automáticas |
+| `GET` · `POST` | `/api/silences` | leitura · Operador/Admin | Janelas de manutenção (`{"namespace", "workload", "type", "startsAt", "endsAt", "reason"}`, curingas `*`) |
+| `DELETE` | `/api/silences/{id}` | Operador/Admin | Encerra a janela agora |
+| `GET` · `POST` | `/api/policies` | leitura · Admin | Autorremediação (`{"type", "action", "namespace", "workload", "maxPerHour"}`; só ações de baixo risco) |
+| `PATCH` · `DELETE` | `/api/policies/{id}` | Admin | Liga/desliga ou apaga a política |
+| `GET` · `POST` | `/api/oncall` | leitura · Admin | Turnos de plantão (`{"teamId", "user", "level": 1\|2, "startsAt", "endsAt"}`) |
+| `DELETE` | `/api/oncall/{id}` | Admin | Remove um turno |
+
+### Ações de correção
+
+| Ação | Risco | Automática? | Comando |
+|---|---|:-:|---|
+| `rollout_restart` | baixo | ✅ | `kubectl rollout restart deployment/<w>` |
+| `delete_pod` | baixo | ✅ | `kubectl delete pod <pod>` |
+| `rerun_job` | baixo | ✅ | novo Job com o mesmo template |
+| `scale` | médio | | `kubectl scale … --replicas=1..5` |
+| `rollout_undo` | médio | | `kubectl rollout undo deployment/<w>` |
+| `set_resources` | médio | | `kubectl set resources … --limits=memory=…,cpu=…` |
+| `cordon` | médio | | `kubectl cordon <nó>` |
+| `drain` | alto | | `kubectl drain <nó> --ignore-daemonsets` |
+| `none` | — | | correção manual |
+
 ### Ciclo de vida e severidade
 
 | Status | Significado |
@@ -120,6 +146,6 @@ Endpoint `http://127.0.0.1:8765/mcp` (Streamable HTTP), com `Authorization: Bear
 | `uso_recursos` | Uso real vs. limite por container | | ✅ | ✅ | |
 | `consultar_runbook` | Runbooks oficiais do tipo de falha | | ✅ | ✅ | ✅ |
 | `runbook_rascunho` | Rascunho de runbook (exige revisão humana) | | ✅ | ✅ | ✅ |
-| `propor_correcao` | Cria um pedido de aprovação; **não executa nada** | | | ✅ | |
+| `propor_correcao` | Cria um pedido de aprovação; **não executa nada**. Ações: `rollout_restart`, `scale`, `rollout_undo`, `set_resources`, `none` | | | ✅ | |
 
 O token principal (`SENTINEL_MCP_TOKEN`) tem todas as ferramentas.

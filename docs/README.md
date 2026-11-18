@@ -24,3 +24,4 @@
 | [0008](architecture/adr/0008-persistencia-ciclo-de-vida-auditoria.md) | PostgreSQL, ciclo de vida explícito e auditoria encadeada |
 | [0009](architecture/adr/0009-identidade-e-acesso.md) | Identidade: sessões no servidor, RBAC com escopo por time, 2FA e OIDC |
 | [0010](architecture/adr/0010-interface-profissional.md) | Interface profissional com painel principal e sala de guerra |
+| [0011](architecture/adr/0011-operacao.md) | Operação: ações, verificação, silêncios, autorremediação e plantão |

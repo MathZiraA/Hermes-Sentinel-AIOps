@@ -46,6 +46,14 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
 - API para as telas: estado do cluster (`/api/clusters/{id}/status`) e Hermes Brain (`/api/brain/graph`,
   `/api/brain/search`, `/api/brain/notes/{nome}`).
 
+- **Ações novas** com parâmetros validados e comando equivalente: voltar revisão, ajustar limites de CPU/memória,
+  isolar/drenar nó e reexecutar job.
+- **Verificação pós-correção**: o incidente fica em monitoramento e reabre (uma vez) se a correção não resolveu.
+- **Janelas de manutenção** (silêncios), **autorremediação** de baixo risco por política com limite por hora, e
+  **plantão** com escalonamento primário → secundário → administradores.
+- **Correlação com deploys**: incidentes logo após um rollout mostram a revisão e a troca de imagem.
+- Tela **Manutenção e plantão** e, no incidente, responsáveis, escalonamento, deploy recente e reaberturas.
+
 ### Segurança
 
 - Logs e eventos tratados como dados não confiáveis, com redação de segredos antes de qualquer envio.

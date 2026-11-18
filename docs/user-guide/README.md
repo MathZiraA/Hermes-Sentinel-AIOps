@@ -59,12 +59,28 @@ decidir sobre ela.
 
 ## Ações de correção
 
-| Ação | Comando | Quando faz sentido |
-|---|---|---|
-| `rollout_restart` | `kubectl rollout restart deployment/…` | Falha passageira, dependência já recuperada |
-| `scale` | `kubectl scale deployment/… --replicas=N` (1 a 5) | Falta de capacidade |
-| `delete_pod` | `kubectl delete pod …` | Um pod travado; o controller recria |
-| `none` | nenhuma | Reiniciar não resolve (config, imagem, volume, limite baixo): correção manual |
+| Ação | Quando faz sentido |
+|---|---|
+| Reiniciar o deployment | Falha passageira, dependência já recuperada |
+| Apagar o pod | Um pod travado; o controller recria |
+| Reexecutar o job | Job que falhou por um problema já resolvido |
+| Ajustar réplicas (1 a 5) | Falta de capacidade |
+| Voltar para a revisão anterior | A falha começou logo depois de um deploy (o incidente mostra o deploy recente) |
+| Ajustar limites de CPU/memória | OOM por limite baixo: a correção de verdade, e não só reiniciar |
+| Isolar / drenar o nó | Nó com problema de disco, memória ou kubelet |
+| Correção manual | Configuração, imagem ou volume faltando: siga o runbook |
+
+Depois de aplicar, o incidente fica em **Monitorando**: o Sentinel confere se o alvo ficou saudável. Se não ficou,
+ele reabre o incidente para uma nova investigação (uma vez) e, na segunda falha, pede um humano.
+
+## Manutenção e plantão
+
+- **Janelas de manutenção:** antes de um deploy planejado, crie uma janela para o workload. Os sinais dele não viram
+  incidente enquanto ela vale.
+- **Autorremediação:** o Admin pode liberar uma ação de baixo risco para um tipo de falha num escopo (ex.: reiniciar o
+  `relatorios` em `CrashLoopBackOff`, até 2 vezes por hora). Acima do limite, volta a pedir aprovação.
+- **Plantão:** cadastre turnos primário e secundário por time. Sem reconhecimento no prazo de SLA, o incidente sobe
+  para o secundário e, no dobro do prazo, para os administradores. O detalhe do incidente mostra os responsáveis.
 
 ## Treinar o time pelo Hermes Brain
 

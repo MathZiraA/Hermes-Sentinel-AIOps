@@ -1482,6 +1482,475 @@
         }
       }
     },
+    "/api/actions": {
+      "get": {
+        "tags": [
+          "operação"
+        ],
+        "summary": "Catálogo de ações de correção",
+        "operationId": "actions_api_actions_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "type": "array",
+                  "title": "Response Actions Api Actions Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/silences": {
+      "get": {
+        "tags": [
+          "operação"
+        ],
+        "summary": "Janelas de manutenção ativas e futuras",
+        "operationId": "list_silences_api_silences_get",
+        "parameters": [
+          {
+            "name": "expired",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Expired"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  },
+                  "title": "Response List Silences Api Silences Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "operação"
+        ],
+        "summary": "Criar janela de manutenção",
+        "operationId": "create_silence_api_silences_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SilenceIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Create Silence Api Silences Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/silences/{silence_id}": {
+      "delete": {
+        "tags": [
+          "operação"
+        ],
+        "summary": "Encerrar janela de manutenção agora",
+        "operationId": "end_silence_api_silences__silence_id__delete",
+        "parameters": [
+          {
+            "name": "silence_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Silence Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response End Silence Api Silences  Silence Id  Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/policies": {
+      "get": {
+        "tags": [
+          "operação"
+        ],
+        "summary": "Políticas de autorremediação",
+        "operationId": "list_policies_api_policies_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "type": "array",
+                  "title": "Response List Policies Api Policies Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "operação"
+        ],
+        "summary": "Liberar uma ação de baixo risco sem aprovação",
+        "operationId": "create_policy_api_policies_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PolicyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Create Policy Api Policies Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/policies/{policy_id}": {
+      "patch": {
+        "tags": [
+          "operação"
+        ],
+        "summary": "Ligar ou desligar uma política",
+        "operationId": "toggle_policy_api_policies__policy_id__patch",
+        "parameters": [
+          {
+            "name": "policy_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Policy Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PolicyPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Toggle Policy Api Policies  Policy Id  Patch"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "operação"
+        ],
+        "summary": "Apagar uma política",
+        "operationId": "remove_policy_api_policies__policy_id__delete",
+        "parameters": [
+          {
+            "name": "policy_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Policy Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Remove Policy Api Policies  Policy Id  Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/oncall": {
+      "get": {
+        "tags": [
+          "operação"
+        ],
+        "summary": "Escala de plantão (atual e futura)",
+        "operationId": "list_oncall_api_oncall_get",
+        "parameters": [
+          {
+            "name": "team",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Team"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true
+                  },
+                  "title": "Response List Oncall Api Oncall Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "operação"
+        ],
+        "summary": "Adicionar turno de plantão",
+        "operationId": "add_shift_api_oncall_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShiftIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Add Shift Api Oncall Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/oncall/{shift_id}": {
+      "delete": {
+        "tags": [
+          "operação"
+        ],
+        "summary": "Remover turno de plantão",
+        "operationId": "delete_shift_api_oncall__shift_id__delete",
+        "parameters": [
+          {
+            "name": "shift_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Shift Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Delete Shift Api Oncall  Shift Id  Delete"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/healthz": {
       "get": {
         "tags": [
@@ -1765,6 +2234,63 @@
         ],
         "title": "PasswordReset"
       },
+      "PolicyIn": {
+        "properties": {
+          "cluster": {
+            "type": "string",
+            "maxLength": 63,
+            "title": "Cluster",
+            "default": "*"
+          },
+          "namespace": {
+            "type": "string",
+            "maxLength": 63,
+            "title": "Namespace",
+            "default": "*"
+          },
+          "workload": {
+            "type": "string",
+            "maxLength": 253,
+            "title": "Workload",
+            "default": "*"
+          },
+          "type": {
+            "type": "string",
+            "maxLength": 80,
+            "title": "Type"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "maxPerHour": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Maxperhour",
+            "default": 2
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "action"
+        ],
+        "title": "PolicyIn"
+      },
+      "PolicyPatch": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled"
+        ],
+        "title": "PolicyPatch"
+      },
       "ScopeIn": {
         "properties": {
           "cluster": {
@@ -1808,6 +2334,94 @@
           "password"
         ],
         "title": "SetupRequest"
+      },
+      "ShiftIn": {
+        "properties": {
+          "teamId": {
+            "type": "string",
+            "title": "Teamid"
+          },
+          "user": {
+            "type": "string",
+            "maxLength": 254,
+            "title": "User"
+          },
+          "level": {
+            "type": "integer",
+            "maximum": 2.0,
+            "minimum": 1.0,
+            "title": "Level",
+            "default": 1
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Startsat"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Endsat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "teamId",
+          "user",
+          "startsAt",
+          "endsAt"
+        ],
+        "title": "ShiftIn"
+      },
+      "SilenceIn": {
+        "properties": {
+          "cluster": {
+            "type": "string",
+            "maxLength": 63,
+            "title": "Cluster",
+            "default": "*"
+          },
+          "namespace": {
+            "type": "string",
+            "maxLength": 63,
+            "title": "Namespace",
+            "default": "*"
+          },
+          "workload": {
+            "type": "string",
+            "maxLength": 253,
+            "title": "Workload",
+            "default": "*"
+          },
+          "type": {
+            "type": "string",
+            "maxLength": 80,
+            "title": "Type",
+            "default": "*"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Startsat"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Endsat"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "startsAt",
+          "endsAt",
+          "reason"
+        ],
+        "title": "SilenceIn"
       },
       "SimulateRequest": {
         "properties": {

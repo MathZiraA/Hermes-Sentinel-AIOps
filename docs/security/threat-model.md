@@ -43,7 +43,8 @@ flowchart LR
 | T8 | Qualquer pessoa com acesso à UI aprova correções | Elevação / Repúdio | Login com sessão HttpOnly revogável, papéis, escopo por time, 2FA, separação de deveres, auditoria encadeada ([ADR 0009](../architecture/adr/0009-identidade-e-acesso.md)) | Eventos do WebSocket filtrados por escopo |
 | T13 | Adivinhar senhas | Spoofing | argon2id, política de senha, bloqueio após 5 falhas, falhas auditadas, 2FA opcional | Bloqueio compartilhado entre réplicas |
 | T14 | Requisição forjada a partir de outro site (CSRF) | Adulteração | `SameSite=Lax` e recusa de escritas de origens fora de `CORS_ORIGINS` | — |
-| T9 | Correção em loop agrava o incidente | DoS | Dedupe de 10 min, correlação por workload, escala limitada a 1–5 réplicas | Verificação pós-correção e limite de ações por janela (Fase 4) |
+| T9 | Correção em loop agrava o incidente | DoS | Dedupe de 10 min, correlação por workload, parâmetros validados (réplicas 1–5, limites de recurso com teto), verificação pós-correção que reabre só uma vez | — |
+| T15 | Autorremediação mal configurada altera o cluster sem ninguém ver | Elevação | Só ações de baixo risco, só por política de Admin (tipo + escopo), limite por hora, auditoria `politica:<id>`, nunca para incidente simulado | Aprovação em duas etapas para criar políticas |
 | T10 | Dependência vulnerável | Vários | `pip-audit` e Dependabot no CI | — |
 | T11 | Segredo commitado | Divulgação | `.gitignore` estrito, gitleaks no CI e no pre-commit | — |
 | T12 | Esgotar a cota de IA | DoS | IA só após anomalia; intervalo mínimo entre chamadas; fallback local | Orçamento diário com corte (Fase 6) |
