@@ -139,3 +139,51 @@ class SessionRow(Base):
     ip: Mapped[str | None] = mapped_column(String(64))
     user_agent: Mapped[str | None] = mapped_column(String(255))
     revoked: Mapped[bool] = mapped_column(default=False)
+
+
+# --------------------------------------------------------------------------- operação (Fase 4)
+class Silence(Base):
+    """Janela de manutenção: sinais que casam com o filtro não viram incidente enquanto ela vale."""
+
+    __tablename__ = "silences"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    cluster_id: Mapped[str] = mapped_column(String(63), default="*")
+    namespace: Mapped[str] = mapped_column(String(63), default="*")
+    workload: Mapped[str] = mapped_column(String(253), default="*")  # aceita curinga (fnmatch)
+    incident_type: Mapped[str] = mapped_column(String(80), default="*")
+    starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    ends_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    reason: Mapped[str] = mapped_column(Text)
+    created_by: Mapped[str] = mapped_column(String(120))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class RemediationPolicy(Base):
+    """Autorremediação: uma ação de baixo risco que roda sem clique humano, só onde o Admin liberou."""
+
+    __tablename__ = "remediation_policies"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    cluster_id: Mapped[str] = mapped_column(String(63), default="*")
+    namespace: Mapped[str] = mapped_column(String(63), default="*")
+    workload: Mapped[str] = mapped_column(String(253), default="*")
+    incident_type: Mapped[str] = mapped_column(String(80))
+    action: Mapped[str] = mapped_column(String(40))
+    max_per_hour: Mapped[int] = mapped_column(Integer, default=2)
+    enabled: Mapped[bool] = mapped_column(default=True)
+    created_by: Mapped[str] = mapped_column(String(120))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class OnCallShift(Base):
+    """Plantão: quem responde por um time num intervalo. level 1 = primário, 2 = secundário."""
+
+    __tablename__ = "oncall_shifts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    team_id: Mapped[str] = mapped_column(ForeignKey("teams.id", ondelete="CASCADE"), index=True)
+    user_email: Mapped[str] = mapped_column(String(254))
+    level: Mapped[int] = mapped_column(Integer, default=1)
+    starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    ends_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
