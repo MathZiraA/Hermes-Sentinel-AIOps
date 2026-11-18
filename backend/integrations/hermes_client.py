@@ -19,6 +19,7 @@ import logging
 import re
 import shutil
 import ssl
+import sys
 import time
 import uuid
 from pathlib import Path
@@ -27,6 +28,7 @@ from typing import Any
 import httpx
 
 from config import settings
+from core import telemetry
 from domain.actions import ACTION_IDS, catalog_for_prompt
 from schemas.events import Incident, clip_bubble
 
@@ -440,11 +442,13 @@ class HermesClient:
             allowed, why = True, ""
         if not allowed:
             await self._record(settings.ai_provider, blocked=True)
+            telemetry.AI_CALLS.labels(settings.ai_provider, "blocked").inc()
             raise BudgetExceeded(why)
         async with self._lock:
             await self._respect_quota()
             self._usage = {}
             source = settings.ai_provider
+            started = time.monotonic()
             try:
                 self.calls += 1
                 if settings.ai_provider == "openai":
@@ -467,6 +471,9 @@ class HermesClient:
                     raise
             finally:
                 self._last_call = time.monotonic()
+                outcome = "error" if sys.exc_info()[0] else "ok"
+                telemetry.AI_CALLS.labels(source, outcome).inc()
+                telemetry.AI_LATENCY.labels(source).observe(self._last_call - started)
                 await self._record(source, self._usage.get("prompt_tokens", 0), self._usage.get("completion_tokens", 0))
 
     async def _record(self, provider: str, tokens_in: int = 0, tokens_out: int = 0, blocked: bool = False) -> None:
@@ -525,7 +532,12 @@ class HermesClient:
         consultar_runbook). Se o Hermes/túnel falhar, cai para `diagnose` (logs no prompt)
         e, em último caso, para o RCA local.
         """
-        if not settings.mcp_token or settings.hermes_mode == "cli" or settings.ai_provider != "hermes":
+        if (
+            not settings.mcp_token
+            or settings.hermes_mode == "cli"
+            or settings.ai_provider != "hermes"
+            or inc.cluster != settings.cluster_id  # o MCP só alcança o cluster local; remotos vêm com os logs
+        ):
             return await self.diagnose(inc, runbooks)  # investigação agêntica (MCP) só com o Hermes
         user = (
             f"INCIDENTE {inc.id} no cluster Kubernetes do notebook (StockFlow).\n"
