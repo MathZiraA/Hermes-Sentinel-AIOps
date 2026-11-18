@@ -87,6 +87,26 @@ class Settings:
     # Identidade deste cluster no Sentinel (multicluster: um id por cluster)
     cluster_id: str = field(default_factory=lambda: os.getenv("SENTINEL_CLUSTER_ID", "local").strip() or "local")
     cluster_name: str = field(default_factory=lambda: os.getenv("SENTINEL_CLUSTER_NAME", "").strip())
+    # Identidade (Fase 2)
+    auth_enabled: bool = field(default_factory=lambda: os.getenv("AUTH_ENABLED", "true").lower() != "false")
+    secret_key: str = field(default_factory=lambda: os.getenv("SENTINEL_SECRET_KEY", "").strip())
+    session_ttl_hours: int = field(default_factory=lambda: _int("SESSION_TTL_HOURS", 12))
+    cookie_secure: bool = field(default_factory=lambda: os.getenv("COOKIE_SECURE", "false").lower() == "true")
+    admin_email: str = field(default_factory=lambda: os.getenv("SENTINEL_ADMIN_EMAIL", "").strip().lower())
+    admin_password: str = field(default_factory=lambda: os.getenv("SENTINEL_ADMIN_PASSWORD", ""))
+    oidc_issuer: str = field(default_factory=lambda: os.getenv("OIDC_ISSUER", "").strip().rstrip("/"))
+    oidc_client_id: str = field(default_factory=lambda: os.getenv("OIDC_CLIENT_ID", "").strip())
+    oidc_client_secret: str = field(default_factory=lambda: os.getenv("OIDC_CLIENT_SECRET", "").strip())
+    oidc_redirect_uri: str = field(
+        default_factory=lambda: os.getenv("OIDC_REDIRECT_URI", "http://localhost:8000/api/auth/oidc/callback")
+    )
+    oidc_default_role: str = field(default_factory=lambda: os.getenv("OIDC_DEFAULT_ROLE", "viewer").strip())
+    oidc_allowed_domains: tuple[str, ...] = field(
+        default_factory=lambda: tuple(
+            d.strip().lower() for d in os.getenv("OIDC_ALLOWED_DOMAINS", "").split(",") if d.strip()
+        )
+    )
+    frontend_url: str = field(default_factory=lambda: os.getenv("FRONTEND_URL", "http://localhost:3000").rstrip("/"))
     obsidian_vault_path: Path = field(
         default_factory=lambda: _path(os.getenv("OBSIDIAN_VAULT_PATH", "./obsidian-vault"))
     )

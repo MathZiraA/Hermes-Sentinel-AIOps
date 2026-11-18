@@ -83,3 +83,59 @@ class AuditEntry(Base):
     details: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     prev_hash: Mapped[str] = mapped_column(String(64))
     hash: Mapped[str] = mapped_column(String(64), unique=True)
+
+
+# --------------------------------------------------------------------------- identidade (Fase 2)
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    email: Mapped[str] = mapped_column(String(254), unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(120))
+    role: Mapped[str] = mapped_column(String(16))  # admin | operator | viewer | auditor
+    password_hash: Mapped[str | None] = mapped_column(String(255))  # vazio = só SSO
+    totp_secret: Mapped[str | None] = mapped_column(String(255))  # cifrado (Fernet)
+    oidc_subject: Mapped[str | None] = mapped_column(String(255), unique=True)
+    is_active: Mapped[bool] = mapped_column(default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class Team(Base):
+    __tablename__ = "teams"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class TeamMember(Base):
+    __tablename__ = "team_members"
+
+    team_id: Mapped[str] = mapped_column(ForeignKey("teams.id", ondelete="CASCADE"), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+
+
+class TeamScope(Base):
+    """O que o time enxerga e opera: cluster e namespace ("*" = todos)."""
+
+    __tablename__ = "team_scopes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    team_id: Mapped[str] = mapped_column(ForeignKey("teams.id", ondelete="CASCADE"), index=True)
+    cluster_id: Mapped[str] = mapped_column(String(63), default="*")
+    namespace: Mapped[str] = mapped_column(String(63), default="*")
+
+
+class SessionRow(Base):
+    """Sessão de login. Só o SHA-256 do token fica no banco; o token vive num cookie HttpOnly."""
+
+    __tablename__ = "sessions"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)  # sha256(token)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    ip: Mapped[str | None] = mapped_column(String(64))
+    user_agent: Mapped[str | None] = mapped_column(String(255))
+    revoked: Mapped[bool] = mapped_column(default=False)
