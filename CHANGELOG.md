@@ -39,6 +39,13 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
 - Administração de usuários e times; tela de login com 2FA e SSO; botões de decisão conforme o papel.
 - Motivo obrigatório para rejeitar uma correção (na tela e na API).
 
+- **Interface profissional**: painel com navegação por papel, Visão geral, Incidentes com filtros, detalhe do
+  incidente com decisão e linha do tempo, Clusters, Hermes Brain com grafo interativo, Relatórios, Auditoria,
+  Usuários, Times e Minha conta. O escritório isométrico virou a Sala de guerra.
+- Tema escuro (padrão) e claro, interface em português e inglês, layout responsivo para aprovar pelo celular.
+- API para as telas: estado do cluster (`/api/clusters/{id}/status`) e Hermes Brain (`/api/brain/graph`,
+  `/api/brain/search`, `/api/brain/notes/{nome}`).
+
 ### Segurança
 
 - Logs e eventos tratados como dados não confiáveis, com redação de segredos antes de qualquer envio.
@@ -47,5 +54,6 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
 - Testes de persistência rodam também contra PostgreSQL 17 no CI.
 - Senhas com argon2id, bloqueio após 5 falhas de login, falhas auditadas e recusa de escritas de outras origens (CSRF).
 - O último administrador não pode ser rebaixado nem desativado; mudanças de acesso derrubam as sessões.
+- O leitor de notas do Hermes Brain nunca interpreta HTML (sem XSS).
 
 [Não lançado]: https://github.com/MathZiraA/Hermes-Sentinel-AIOps/commits/main

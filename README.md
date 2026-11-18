@@ -36,6 +36,8 @@ escritório isométrico, explicando tudo em português simples.
 - **Memória que aprende.** O Hermes Brain liga incidentes, serviços, padrões, runbooks e lições humanas num grafo do
   Obsidian. O motivo de cada aprovação ou rejeição ensina o time.
 - **Correlação.** Vários sinais do mesmo workload viram um único incidente.
+- **Pronto para empresa.** Login com 2FA e SSO, papéis com escopo por time, SEV1–SEV4 com SLA, auditoria imutável e
+  um painel responsivo em português e inglês, com tema escuro e claro.
 
 ## Como funciona
 
@@ -69,7 +71,8 @@ make setup      # venv do backend, dependências do frontend, .env
 make dev        # backend :8000 + frontend :3000
 ```
 
-Abra http://localhost:3000 e clique em **Simular Incidente**. Para ligar a um cluster real e ao Hermes, siga o
+Abra http://localhost:3000, crie o administrador na primeira tela e, na **Sala de guerra**, clique em
+**Simular Incidente**. Para ligar a um cluster real e ao Hermes, siga o
 [guia de instalação](docs/operations/installation.md) e o [ambiente de demonstração](docs/operations/demo-environment.md).
 
 | Comando | O que faz |
@@ -84,7 +87,9 @@ Abra http://localhost:3000 e clique em **Simular Incidente**. Para ligar a um cl
 | Camada | Tecnologia |
 |---|---|
 | Backend | Python 3.12+, FastAPI, cliente oficial do Kubernetes, SDK MCP |
-| Frontend | React 19, TanStack Start, Tailwind, cena isométrica em CSS 3D |
+| Frontend | React 19, TanStack Start/Router/Query, Tailwind, Recharts, cena isométrica em CSS 3D |
+| Dados | PostgreSQL (SQLite na demo), SQLAlchemy 2, Alembic |
+| Identidade | Sessões HttpOnly, argon2id, TOTP, OIDC |
 | IA | Hermes Agent (gateway OpenAI-compatível) + Gemini |
 | Memória | Obsidian (Markdown + wikilinks) |
 | Qualidade | pytest, Vitest, ruff, ESLint, Prettier, pip-audit, gitleaks, GitHub Actions |

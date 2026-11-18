@@ -9,13 +9,23 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as TesteComunicacaoRouteImport } from './routes/teste-comunicacao'
+import { Route as AppIndexRouteImport } from './routes/_app.index'
+import { Route as AppAccountRouteImport } from './routes/_app.account'
+import { Route as AppAuditRouteImport } from './routes/_app.audit'
+import { Route as AppBrainRouteImport } from './routes/_app.brain'
+import { Route as AppClustersRouteImport } from './routes/_app.clusters'
+import { Route as AppReportsRouteImport } from './routes/_app.reports'
+import { Route as AppWarRoomRouteImport } from './routes/_app.war-room'
+import { Route as AppAdminTeamsRouteImport } from './routes/_app.admin.teams'
+import { Route as AppAdminUsersRouteImport } from './routes/_app.admin.users'
+import { Route as AppIncidentsIndexRouteImport } from './routes/_app.incidents.index'
+import { Route as AppIncidentsIncidentIdRouteImport } from './routes/_app.incidents.$incidentId'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -28,44 +38,171 @@ const TesteComunicacaoRoute = TesteComunicacaoRouteImport.update({
   path: '/teste-comunicacao',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppIndexRoute = AppIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAccountRoute = AppAccountRouteImport.update({
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAuditRoute = AppAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppBrainRoute = AppBrainRouteImport.update({
+  id: '/brain',
+  path: '/brain',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppClustersRoute = AppClustersRouteImport.update({
+  id: '/clusters',
+  path: '/clusters',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppReportsRoute = AppReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppWarRoomRoute = AppWarRoomRouteImport.update({
+  id: '/war-room',
+  path: '/war-room',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAdminTeamsRoute = AppAdminTeamsRouteImport.update({
+  id: '/admin/teams',
+  path: '/admin/teams',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAdminUsersRoute = AppAdminUsersRouteImport.update({
+  id: '/admin/users',
+  path: '/admin/users',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppIncidentsIndexRoute = AppIncidentsIndexRouteImport.update({
+  id: '/incidents/',
+  path: '/incidents/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppIncidentsIncidentIdRoute = AppIncidentsIncidentIdRouteImport.update({
+  id: '/incidents/$incidentId',
+  path: '/incidents/$incidentId',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
   '/teste-comunicacao': typeof TesteComunicacaoRoute
+  '/account': typeof AppAccountRoute
+  '/audit': typeof AppAuditRoute
+  '/brain': typeof AppBrainRoute
+  '/clusters': typeof AppClustersRoute
+  '/reports': typeof AppReportsRoute
+  '/war-room': typeof AppWarRoomRoute
+  '/admin/teams': typeof AppAdminTeamsRoute
+  '/admin/users': typeof AppAdminUsersRoute
+  '/incidents/$incidentId': typeof AppIncidentsIncidentIdRoute
+  '/incidents/': typeof AppIncidentsIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/teste-comunicacao': typeof TesteComunicacaoRoute
+  '/account': typeof AppAccountRoute
+  '/audit': typeof AppAuditRoute
+  '/brain': typeof AppBrainRoute
+  '/clusters': typeof AppClustersRoute
+  '/reports': typeof AppReportsRoute
+  '/war-room': typeof AppWarRoomRoute
+  '/': typeof AppIndexRoute
+  '/admin/teams': typeof AppAdminTeamsRoute
+  '/admin/users': typeof AppAdminUsersRoute
+  '/incidents/$incidentId': typeof AppIncidentsIncidentIdRoute
+  '/incidents': typeof AppIncidentsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
+  '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/teste-comunicacao': typeof TesteComunicacaoRoute
+  '/_app/account': typeof AppAccountRoute
+  '/_app/audit': typeof AppAuditRoute
+  '/_app/brain': typeof AppBrainRoute
+  '/_app/clusters': typeof AppClustersRoute
+  '/_app/reports': typeof AppReportsRoute
+  '/_app/war-room': typeof AppWarRoomRoute
+  '/_app/': typeof AppIndexRoute
+  '/_app/admin/teams': typeof AppAdminTeamsRoute
+  '/_app/admin/users': typeof AppAdminUsersRoute
+  '/_app/incidents/$incidentId': typeof AppIncidentsIncidentIdRoute
+  '/_app/incidents/': typeof AppIncidentsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/teste-comunicacao'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/teste-comunicacao'
+    | '/account'
+    | '/audit'
+    | '/brain'
+    | '/clusters'
+    | '/reports'
+    | '/war-room'
+    | '/admin/teams'
+    | '/admin/users'
+    | '/incidents/$incidentId'
+    | '/incidents/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/teste-comunicacao'
-  id: '__root__' | '/' | '/login' | '/teste-comunicacao'
+  to:
+    | '/login'
+    | '/teste-comunicacao'
+    | '/account'
+    | '/audit'
+    | '/brain'
+    | '/clusters'
+    | '/reports'
+    | '/war-room'
+    | '/'
+    | '/admin/teams'
+    | '/admin/users'
+    | '/incidents/$incidentId'
+    | '/incidents'
+  id:
+    | '__root__'
+    | '/_app'
+    | '/login'
+    | '/teste-comunicacao'
+    | '/_app/account'
+    | '/_app/audit'
+    | '/_app/brain'
+    | '/_app/clusters'
+    | '/_app/reports'
+    | '/_app/war-room'
+    | '/_app/'
+    | '/_app/admin/teams'
+    | '/_app/admin/users'
+    | '/_app/incidents/$incidentId'
+    | '/_app/incidents/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
+  AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
   TesteComunicacaoRoute: typeof TesteComunicacaoRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
+    '/_app': {
+      id: '/_app'
+      path: ''
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+      preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -82,11 +219,118 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TesteComunicacaoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/': {
+      id: '/_app/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/account': {
+      id: '/_app/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AppAccountRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/audit': {
+      id: '/_app/audit'
+      path: '/audit'
+      fullPath: '/audit'
+      preLoaderRoute: typeof AppAuditRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/brain': {
+      id: '/_app/brain'
+      path: '/brain'
+      fullPath: '/brain'
+      preLoaderRoute: typeof AppBrainRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/clusters': {
+      id: '/_app/clusters'
+      path: '/clusters'
+      fullPath: '/clusters'
+      preLoaderRoute: typeof AppClustersRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/reports': {
+      id: '/_app/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof AppReportsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/war-room': {
+      id: '/_app/war-room'
+      path: '/war-room'
+      fullPath: '/war-room'
+      preLoaderRoute: typeof AppWarRoomRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/admin/teams': {
+      id: '/_app/admin/teams'
+      path: '/admin/teams'
+      fullPath: '/admin/teams'
+      preLoaderRoute: typeof AppAdminTeamsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/admin/users': {
+      id: '/_app/admin/users'
+      path: '/admin/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AppAdminUsersRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/incidents/': {
+      id: '/_app/incidents/'
+      path: '/incidents'
+      fullPath: '/incidents/'
+      preLoaderRoute: typeof AppIncidentsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/incidents/$incidentId': {
+      id: '/_app/incidents/$incidentId'
+      path: '/incidents/$incidentId'
+      fullPath: '/incidents/$incidentId'
+      preLoaderRoute: typeof AppIncidentsIncidentIdRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
+interface AppRouteChildren {
+  AppAccountRoute: typeof AppAccountRoute
+  AppAuditRoute: typeof AppAuditRoute
+  AppBrainRoute: typeof AppBrainRoute
+  AppClustersRoute: typeof AppClustersRoute
+  AppReportsRoute: typeof AppReportsRoute
+  AppWarRoomRoute: typeof AppWarRoomRoute
+  AppIndexRoute: typeof AppIndexRoute
+  AppAdminTeamsRoute: typeof AppAdminTeamsRoute
+  AppAdminUsersRoute: typeof AppAdminUsersRoute
+  AppIncidentsIncidentIdRoute: typeof AppIncidentsIncidentIdRoute
+  AppIncidentsIndexRoute: typeof AppIncidentsIndexRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppAccountRoute: AppAccountRoute,
+  AppAuditRoute: AppAuditRoute,
+  AppBrainRoute: AppBrainRoute,
+  AppClustersRoute: AppClustersRoute,
+  AppReportsRoute: AppReportsRoute,
+  AppWarRoomRoute: AppWarRoomRoute,
+  AppIndexRoute: AppIndexRoute,
+  AppAdminTeamsRoute: AppAdminTeamsRoute,
+  AppAdminUsersRoute: AppAdminUsersRoute,
+  AppIncidentsIncidentIdRoute: AppIncidentsIncidentIdRoute,
+  AppIncidentsIndexRoute: AppIncidentsIndexRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+  AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
   TesteComunicacaoRoute: TesteComunicacaoRoute,
 }

@@ -328,6 +328,58 @@ class K8sService:
                 )
         return "\n".join(out) or "(sem métricas)"
 
+    # ------------------------------------------------------------------ dados estruturados (telas)
+    def cluster_status(self, namespaces: list[str]) -> dict[str, Any]:
+        """Nós e workloads em JSON, para a tela de saúde do cluster."""
+        nodes = []
+        for n in self.core.list_node(_request_timeout=10).items:
+            conds = {c.type: c.status for c in n.status.conditions or []}
+            nodes.append(
+                {
+                    "name": n.metadata.name,
+                    "ready": conds.get("Ready") == "True",
+                    "pressure": [
+                        t for t in ("MemoryPressure", "DiskPressure", "PIDPressure") if conds.get(t) == "True"
+                    ],
+                    "kubelet": n.status.node_info.kubelet_version,
+                    "cpu": n.status.allocatable.get("cpu"),
+                    "memory": n.status.allocatable.get("memory"),
+                    "unschedulable": bool(n.spec.unschedulable),
+                }
+            )
+        workloads = []
+        for ns in namespaces:
+            for d in self.apps.list_namespaced_deployment(ns, _request_timeout=10).items:
+                workloads.append(
+                    {
+                        "kind": "Deployment",
+                        "namespace": ns,
+                        "name": d.metadata.name,
+                        "desired": d.spec.replicas if d.spec.replicas is not None else 1,
+                        "ready": d.status.ready_replicas or 0,
+                    }
+                )
+            for st in self.apps.list_namespaced_stateful_set(ns, _request_timeout=10).items:
+                workloads.append(
+                    {
+                        "kind": "StatefulSet",
+                        "namespace": ns,
+                        "name": st.metadata.name,
+                        "desired": st.spec.replicas if st.spec.replicas is not None else 1,
+                        "ready": st.status.ready_replicas or 0,
+                    }
+                )
+        pods = {"total": 0, "healthy": 0}
+        for ns in namespaces:
+            for p in self.core.list_namespaced_pod(ns, _request_timeout=10).items:
+                if p.status.phase == "Succeeded":
+                    continue
+                pods["total"] += 1
+                statuses = p.status.container_statuses or []
+                if p.status.phase == "Running" and statuses and all(c.ready for c in statuses):
+                    pods["healthy"] += 1
+        return {"nodes": nodes, "workloads": sorted(workloads, key=lambda w: (w["namespace"], w["name"])), "pods": pods}
+
     # ------------------------------------------------------------------ remediação (exige aprovação)
     def rollout_restart(self, namespace: str, deployment: str) -> str:
         stamp = datetime.now(UTC).isoformat()

@@ -100,3 +100,13 @@ def test_migra_vault_antigo(tmp_path, monkeypatch):
     assert (tmp_path / brain.RUNBOOKS / "Runbook - OOMKilled.md").exists()
     assert not (tmp_path / "Post-Mortems").exists()
     assert "INC-1-ABC" in (tmp_path / brain.SERVICES / "relatorios.md").read_text()
+
+
+def test_grafo_liga_incidente_servico_e_padrao(vault):
+    brain.write_incident(_inc(), [])
+    g = brain.graph()
+    ids = {n["id"] for n in g["nodes"]}
+    assert {"OOMKilled", "relatorios"} <= ids
+    inc_note = next(n["id"] for n in g["nodes"] if n["group"] == "incidente" and "INC-1" in n["id"])
+    assert {"source": inc_note, "target": "relatorios"} in g["links"]
+    assert all(link["source"] in ids and link["target"] in ids for link in g["links"])
