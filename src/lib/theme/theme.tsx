@@ -1,4 +1,6 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, type ReactNode } from "react";
+
+import { createStoredValue } from "@/lib/storage/stored-value";
 
 export type Theme = "light" | "dark";
 const STORAGE_KEY = "sentinel.theme";
@@ -9,19 +11,11 @@ interface ThemeState {
 }
 
 const ThemeContext = createContext<ThemeState | null>(null);
+const themeStore = createStoredValue<Theme>(STORAGE_KEY, "dark", ["dark", "light"]);
 
 /** Tema escuro por padrão (centro de operações); a escolha fica salva neste navegador. */
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("dark");
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved === "light" || saved === "dark") setTheme(saved);
-    } catch {
-      /* armazenamento indisponível */
-    }
-  }, []);
+  const theme = themeStore.use();
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
@@ -29,15 +23,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [theme]);
 
   const toggle = useCallback(() => {
-    setTheme((t) => {
-      const next = t === "dark" ? "light" : "dark";
-      try {
-        localStorage.setItem(STORAGE_KEY, next);
-      } catch {
-        /* ignora */
-      }
-      return next;
-    });
+    themeStore.set(themeStore.get() === "dark" ? "light" : "dark");
   }, []);
 
   return <ThemeContext.Provider value={{ theme, toggle }}>{children}</ThemeContext.Provider>;

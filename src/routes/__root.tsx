@@ -121,7 +121,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="pt-BR">
+    // O script abaixo muda a classe do tema e o idioma muda `lang` antes da hidratação: a diferença é esperada.
+    <html lang="pt-BR" suppressHydrationWarning>
       <head>
         <HeadContent />
         {/* Aplica o tema salvo antes da primeira pintura (evita o "flash" do tema claro). Texto fixo, sem dados do usuário. */}
