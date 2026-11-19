@@ -1,12 +1,6 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, type ReactNode } from "react";
+
+import { createStoredValue } from "@/lib/storage/stored-value";
 
 /** Dicionário da interface. PT é o idioma de referência; EN tem as mesmas chaves (checado pelo TypeScript). */
 const pt = {
@@ -447,31 +441,16 @@ interface I18nState {
 }
 
 const I18nContext = createContext<I18nState | null>(null);
+const localeStore = createStoredValue<Locale>(STORAGE_KEY, "pt", ["pt", "en"]);
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>("pt");
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved === "pt" || saved === "en") setLocaleState(saved);
-    } catch {
-      /* armazenamento indisponível: fica em português */
-    }
-  }, []);
+  const locale = localeStore.use();
 
   useEffect(() => {
     document.documentElement.lang = locale === "pt" ? "pt-BR" : "en";
   }, [locale]);
 
-  const setLocale = useCallback((l: Locale) => {
-    setLocaleState(l);
-    try {
-      localStorage.setItem(STORAGE_KEY, l);
-    } catch {
-      /* ignora */
-    }
-  }, []);
+  const setLocale = useCallback((l: Locale) => localeStore.set(l), []);
 
   const value = useMemo<I18nState>(() => {
     const tag = locale === "pt" ? "pt-BR" : "en-US";

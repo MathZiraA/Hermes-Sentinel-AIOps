@@ -57,27 +57,46 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | null>(null);
 
+interface Session {
+  /** Ausente quando a configuração não pôde ser lida: mantém a anterior. */
+  config?: AuthConfig | undefined;
+  user: CurrentUser | null;
+}
+
+async function fetchSession(): Promise<Session> {
+  let config: AuthConfig | undefined;
+  try {
+    config = await api.get<AuthConfig>("/api/auth/config");
+    return { config, user: await api.get<CurrentUser>("/api/auth/me") };
+  } catch {
+    return { config, user: null };
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [config, setConfig] = useState<AuthConfig | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const refresh = useCallback(async () => {
-    try {
-      setConfig(await api.get<AuthConfig>("/api/auth/config"));
-      setUser(await api.get<CurrentUser>("/api/auth/me"));
-    } catch {
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
+  const applySession = useCallback((session: Session) => {
+    if (session.config) setConfig(session.config);
+    setUser(session.user);
+    setLoading(false);
   }, []);
 
+  const refresh = useCallback(async () => applySession(await fetchSession()), [applySession]);
+
   useEffect(() => {
-    void refresh();
+    let active = true;
+    void fetchSession().then((session) => {
+      if (active) applySession(session);
+    });
     setUnauthorizedHandler(() => setUser(null));
-    return () => setUnauthorizedHandler(null);
-  }, [refresh]);
+    return () => {
+      active = false;
+      setUnauthorizedHandler(null);
+    };
+  }, [applySession]);
 
   const value = useMemo<AuthState>(
     () => ({
