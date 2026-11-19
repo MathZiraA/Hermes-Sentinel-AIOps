@@ -10,6 +10,9 @@ permissions:
 jobs:
   conventional-commit:
     name: Conventional Commits
+    # O Dependabot escreve "Bump …" com maiúscula e reescreve o título a cada rebase. O prefixo
+    # (ci(deps)/chore(deps)) já vem do .github/dependabot.yml, então os PRs dele não são validados.
+    if: github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: amannn/action-semantic-pull-request@v6
