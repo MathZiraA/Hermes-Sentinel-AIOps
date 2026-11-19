@@ -103,6 +103,8 @@ Abra http://localhost:3000, crie o administrador na primeira tela e, na **Sala d
 
 ## Estrutura do repositório
 
+Cada pasta principal tem um README próprio explicando o que tem dentro.
+
 ```
 ├── backend/               API FastAPI, Monitor, orquestrador, servidor MCP, Hermes Brain
 │   ├── agent/             agente de cluster remoto (python -m agent)
@@ -111,17 +113,28 @@ Abra http://localhost:3000, crie o administrador na primeira tela e, na **Sala d
 │   ├── domain/            regras puras: ciclo de vida, SLA, ações, permissões
 │   ├── identity/          login, sessões, 2FA, OIDC
 │   ├── agents/            orquestração dos cinco agentes
-│   ├── integrations/      Hermes, Hermes Brain, Obsidian, GitHub
+│   ├── integrations/      Hermes, Hermes Brain, Obsidian, GitHub, Jira
 │   ├── k8s/               cliente e Monitor (watch + varredura)
 │   ├── schemas/           contratos de eventos e incidentes
 │   └── tests/
 ├── src/                   frontend (React + TanStack Start, criado no Lovable)
-├── deploy/                Docker Compose (+ Caddy) e Helm chart
+│   ├── routes/            páginas
+│   ├── components/        componentes por área (+ ui/ do shadcn)
+│   ├── lib/               API, sessão, idiomas, tema, estado em tempo real
+│   └── test/
+├── public/                arquivos estáticos da interface
+├── deploy/
+│   ├── docker/            Dockerfiles do backend e da interface
+│   ├── compose/           Docker Compose (+ PostgreSQL e Caddy)
+│   └── helm/              Helm chart
 ├── docs/                  arquitetura, ADRs, operação, segurança, manual, API
 ├── obsidian-vault/        Hermes Brain (só os runbooks oficiais são versionados)
-├── scripts/               instalação e desenvolvimento
-└── .github/               CI, templates de issue e PR, Dependabot
+├── scripts/               instalação e desenvolvimento (chamados pelo Makefile)
+└── .github/               CI, release, templates de issue e PR, Dependabot
 ```
+
+Os arquivos de configuração do frontend (`package.json`, `vite.config.ts`, `tsconfig.json`, `eslint.config.js`…)
+ficam na raiz porque o Lovable exige. O `Makefile` reúne os comandos do dia a dia (`make help`).
 
 ## Status
 

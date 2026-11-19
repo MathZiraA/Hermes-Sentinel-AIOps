@@ -1,4 +1,5 @@
-# Backend do Hermes Sentinel (build: docker build -f backend/Dockerfile .) (API, Monitor, MCP) — também é a imagem do agente de cluster (python -m agent).
+# Backend do Hermes Sentinel (API, Monitor, MCP) — também é a imagem do agente de cluster (python -m agent).
+# Build a partir da raiz do repositório: docker build -f deploy/docker/backend.Dockerfile .
 FROM docker.io/library/python:3.13-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -12,7 +13,7 @@ WORKDIR /app
 RUN useradd --uid 10001 --create-home --shell /usr/sbin/nologin sentinel \
  && mkdir -p /data/brain /app/data && chown -R 10001:10001 /data /app
 
-# Contexto do build: raiz do repositório (docker build -f backend/Dockerfile .)
+# Contexto do build: raiz do repositório (docker build -f deploy/docker/backend.Dockerfile .)
 COPY backend/requirements.txt .
 RUN pip install -r requirements.txt
 

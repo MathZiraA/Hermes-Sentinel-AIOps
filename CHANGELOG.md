@@ -7,6 +7,15 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
 
 ## [Não lançado]
 
+### Alterado
+
+- Dockerfiles movidos para `deploy/docker/` (`backend.Dockerfile` e `web.Dockerfile`); CI, release e Compose
+  atualizados.
+
+### Documentação
+
+- README em cada pasta principal (`backend/`, `src/`, `deploy/`, `scripts/`) e árvore do repositório atualizada.
+
 ## [1.0.0] - 2026-11-18
 
 Primeira versão estável: de demonstração a produto self-hosted.

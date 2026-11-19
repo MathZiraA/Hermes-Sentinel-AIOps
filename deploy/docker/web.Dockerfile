@@ -1,4 +1,5 @@
 # Interface web do Hermes Sentinel (TanStack Start como servidor Node).
+# Build a partir da raiz do repositório: docker build -f deploy/docker/web.Dockerfile .
 FROM docker.io/oven/bun:1.3 AS build
 WORKDIR /app
 COPY package.json bun.lock bunfig.toml ./
