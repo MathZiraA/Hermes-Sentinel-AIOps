@@ -15,8 +15,8 @@ jobs:
     strategy:
       matrix:
         include:
-          - {name: backend, file: backend/Dockerfile}
-          - {name: web, file: Dockerfile}
+          - {name: backend, file: deploy/docker/backend.Dockerfile}
+          - {name: web, file: deploy/docker/web.Dockerfile}
     steps:
       - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v3
