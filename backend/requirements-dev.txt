@@ -3,5 +3,5 @@
 pytest>=8,<10
 pytest-cov>=7.1.0,<8
 pytest-asyncio>=1,<2
-ruff>=0.14,<1
+ruff>=0.17.6,<1
 pip-audit>=2.10.1,<3
